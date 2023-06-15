@@ -1,5 +1,8 @@
 #pragma once
+#include <concepts>
 #include <iterator>
+#include <ranges>
+#include <type_traits>
 #include <utility>
 
 #include "__detail/concepts.hpp"
@@ -58,6 +61,42 @@ constexpr std::sentinel_for<ranges::iterator_t<R>> auto before_begin
     return std::forward<R>(range).before_begin();
   else
     return default_front_sentinel;
+}
+
+/**
+ * @brief The concept of a type that can serve as a lower bound for a
+ *        subrange of the given range (i.e. a dereferenceable iterator
+ *        or a front sentinel)
+ * @note  An additional semantic requirement here implies that a left
+ *        limit of a range never compares equal to its end()
+ **/
+template <typename T, typename R>
+concept left_limit_of = ranges::range<R>
+  && (std::same_as<std::remove_cvref_t<T>, front_sentinel_t<R>>
+      || std::same_as<std::remove_cvref_t<T>, ranges::iterator_t<R>>);
+
+/**
+ * @brief The concept of a type that can serve as an upper bound for a
+ *        subrange of the given range (i.e. a dereferenceable iterator
+ *        or a sentinel)
+ * @note  An additional semantic requirement here implies that a right
+ *        limit of a range never compares equal to its before_begin()
+ **/
+template <typename T, typename R>
+concept right_limit_of = ranges::range<R>
+  && (std::same_as<std::remove_cvref_t<T>, ranges::sentinel_t<R>>
+      || std::same_as<std::remove_cvref_t<T>, ranges::iterator_t<R>>);
+
+/**
+ * @brief Returns an iterator to an element immediately following the
+ *        given left limit in the given range
+ **/
+template <ranges::range R, left_limit_of<R> L>
+constexpr ranges::iterator_t<R> after(R&& range, const L it) {
+  if constexpr (std::same_as<L, ranges::iterator_t<R>>)
+    return ranges::next(it);
+  else  // same as front_sentinel_t<R>
+    return ranges::begin(std::forward<R>(range));
 }
 
 } // namespace enranged
