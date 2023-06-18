@@ -3,6 +3,14 @@
 
 #include "__detail/splicing_impl.hpp"
 
+/**
+ * @file
+ * Tools for ranges that can be spliced (e.g. linked lists)
+ *
+ * @author    patternnoster@github
+ * @copyright 2023, under the MIT License (see /LICENSE for details)
+ **/
+
 namespace enranged {
 
 /**

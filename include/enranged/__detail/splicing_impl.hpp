@@ -4,6 +4,14 @@
 
 #include "../limits.hpp"
 
+/**
+ * @file
+ * Implementation details for range splicing tools
+ *
+ * @author    patternnoster@github
+ * @copyright 2023, under the MIT License (see /LICENSE for details)
+ **/
+
 namespace enranged::__detail {
 
 template <typename R, typename P>

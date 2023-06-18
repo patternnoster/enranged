@@ -3,6 +3,14 @@
 #include <iterator>
 #include <ranges>
 
+/**
+ * @file
+ * Implementation details for range limits
+ *
+ * @author    patternnoster@github
+ * @copyright 2023, under the MIT License (see /LICENSE for details)
+ **/
+
 namespace enranged {
 
 namespace ranges = std::ranges;

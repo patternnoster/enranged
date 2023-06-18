@@ -7,6 +7,15 @@
 
 #include "__detail/limits_impl.hpp"
 
+/**
+ * @file
+ * The front sentinel and the concepts of left and right limits of a
+ * range
+ *
+ * @author    patternnoster@github
+ * @copyright 2023, under the MIT License (see /LICENSE for details)
+ **/
+
 namespace enranged {
 
 /**
