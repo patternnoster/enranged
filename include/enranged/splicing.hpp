@@ -47,7 +47,24 @@ namespace enranged {
  **/
 template <typename R>
 concept spliceable_range = ranges::forward_range<R>
-  && (__detail::has_splice<R>
-      || (__detail::has_before_begin<R> && __detail::has_splice_after<R>));
+  && (__detail::has_splice<R, R>
+      || (__detail::has_before_begin<R> && __detail::has_splice_after<R, R>));
+
+/**
+ * @brief The concept of a range that can be naturally spliced with a
+ *        subrange of another range (see spliceable_range for details)
+ * @note  There may be additional constraints imposed on the ranges
+ *        being spliced, that are not expressible with the language of
+ *        concepts. For example std::list<T>::splice() requires that
+ *        both the source and destination lists have equal allocators,
+ *        i.e. src.get_allocator() == dst.get_allocator(). Violating
+ *        requirements like that one may lead to undefined behaviour
+ **/
+template <typename R1, typename R2>
+concept spliceable_with_range =
+  ranges::forward_range<R1> && ranges::forward_range<R2>
+  && (__detail::has_splice<R1, R2>
+      || (__detail::has_before_begin<R1> && __detail::has_before_begin<R2>
+          && __detail::has_splice_after<R1, R2>));
 
 } // namespace enranged

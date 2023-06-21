@@ -15,6 +15,7 @@ TYPED_TEST_SUITE(SplicingTests, Spliceable);
 
 TYPED_TEST(SplicingTests, concepts) {
   EXPECT_TRUE((spliceable_range<TypeParam>));
+  EXPECT_TRUE((spliceable_with_range<TypeParam, TypeParam>));
 
   TypeParam range{};
   const auto bb = before_begin(range);
