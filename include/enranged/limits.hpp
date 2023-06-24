@@ -9,8 +9,8 @@
 
 /**
  * @file
- * The front sentinel and the concepts of left and right limits of a
- * range
+ * The front sentinel, the concepts of left and right limits of a
+ * range and coranges
  *
  * @author    patternnoster@github
  * @copyright 2023, under the MIT License (see /LICENSE for details)
@@ -107,5 +107,38 @@ constexpr ranges::iterator_t<R> after(R&& range, const L it) {
   else  // same as front_sentinel_t<R>
     return ranges::begin(std::forward<R>(range));
 }
+
+/**
+ * @brief The concept of a range with the known last element
+ *
+ * A regular STL range r is of form [a, b) where a=begin(r) is an
+ * iterator and b=end(r) is a sentinel. In contrast, a corange c is of
+ * form (x, y] where x=before_begin(c) is a front sentinel and
+ * y=last(c) is an iterator. In this sense, coranges are dual to
+ * ranges.
+ *
+ * A range r is considered a corange if it either:
+ *   defines method r.last() returning an iterator to the last element
+ *   of r, that satisfies the following semantic requirements:
+ *   - if r is not empty then last() must return a dereferenceable
+ *     iterator;
+ *   - if r is a forward_range and is not empty then next(last(r)) ==
+ *     end(r) must be true.
+ * or
+ *   is both bidirectional_range and common_range;
+ * or
+ *   is both random_access_range and sized_range.
+ *
+ * Unlike with regular ranges, we consider a corange to be valid only
+ * if its last() iterator is dereferenceable. Thus only non-empty
+ * coranges can be valid. Functions that accept a corange (either
+ * directly with a type constraint, or semantically as a pair (a, b]
+ * of a front sentinel + iterator) normally require its validity
+ **/
+template <typename R>
+concept corange = ranges::range<R>
+  && (__detail::has_last<R>
+      || (ranges::bidirectional_range<R> && ranges::common_range<R>)
+      || (ranges::random_access_range<R> && ranges::sized_range<R>));
 
 } // namespace enranged

@@ -23,5 +23,10 @@ concept has_before_begin = requires(R obj) {
   { obj.before_begin() } noexcept -> std::sentinel_for<ranges::iterator_t<R>>;
 };
 
+template <typename R>
+concept has_last = requires(R obj) {
+  { obj.last() } -> std::same_as<ranges::iterator_t<R>>;
+};
+
 } // namespace __detail
 } // namespace enranged
