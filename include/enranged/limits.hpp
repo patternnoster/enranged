@@ -141,4 +141,32 @@ concept corange = ranges::range<R>
       || (ranges::bidirectional_range<R> && ranges::common_range<R>)
       || (ranges::random_access_range<R> && ranges::sized_range<R>));
 
+/**
+ * @brief The concept of a corange (i.e., a range with a known last
+ *        element) that is also a forward_range
+ * @note  There is additional semantic requirements implied by the
+ *        equality preserving properties of forward ranges, namely:
+ *        - begin(r) == after(r, before_begin(r))
+ *        - next(last(r)) == end(r)
+ *        Both have already been described above and are mentioned
+ *        here for convenience only
+ **/
+template <typename R>
+concept forward_corange = corange<R> && ranges::forward_range<R>;
+
+/**
+ * @brief Returns an iterator to the last element of the given corange
+ * @note  The behaviour is undefined if the range is empty (see above
+ *        about the validity of coranges)
+ **/
+template <corange R>
+constexpr ranges::iterator_t<R> last(R&& range) {
+  if constexpr (__detail::has_last<R>)
+    return std::forward<R>(range).last();
+  else if constexpr (ranges::bidirectional_range<R> && ranges::common_range<R>)
+    return ranges::prev(ranges::end(std::forward<R>(range)));
+  else  // random_access and sized
+    return ranges::begin(range) + (ranges::size(range) - 1);
+}
+
 } // namespace enranged
