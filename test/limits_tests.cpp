@@ -6,17 +6,20 @@
 
 #include "enranged/limits.hpp"
 
+#include "linked_list.hpp"
+
 using namespace enranged;
 
 template <typename T>
 class LimitsTests: public ::testing::Test {};
 
 using Ranges = ::testing::Types<std::vector<int>, std::deque<int>,
-                                std::list<int>, std::forward_list<int>>;
+                                std::list<int>, std::forward_list<int>,
+                                linked_list<int>>;
 TYPED_TEST_SUITE(LimitsTests, Ranges);
 
-void push_front(auto& cont, const auto elt) { cont.push_front(elt); }
-void push_front(std::vector<int>& cont, const int elt) {
+void emplace_front(auto& cont, const auto elt) { cont.emplace_front(elt); }
+void emplace_front(std::vector<int>& cont, const int elt) {
   cont.insert(cont.begin(), elt);
 }
 
@@ -39,7 +42,7 @@ TYPED_TEST(LimitsTests, before_begin) {
 
   EXPECT_EQ(after(range, bb), ranges::begin(range));
 
-  push_front(range, 42);
+  emplace_front(range, 42);
   EXPECT_EQ(after(range, bb), ranges::begin(range));
 }
 
@@ -47,15 +50,15 @@ template <typename T>
 class CorangeLimitsTests: public ::testing::Test {};
 
 using Coranges = ::testing::Types<std::vector<int>, std::deque<int>,
-                                  std::list<int>>;
+                                  std::list<int>, linked_list<int>>;
 TYPED_TEST_SUITE(CorangeLimitsTests, Coranges);
 
 TYPED_TEST(CorangeLimitsTests, last) {
   TypeParam range{};
   EXPECT_TRUE((corange<TypeParam>));
 
-  push_front(range, 42);
-  push_front(range, 17);
+  emplace_front(range, 42);
+  emplace_front(range, 17);
 
   EXPECT_EQ(*last(range), 42);
   EXPECT_EQ(after(range, last(range)), ranges::end(range));
