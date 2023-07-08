@@ -67,4 +67,55 @@ concept spliceable_with_range =
       || (__detail::has_before_begin<R1> && __detail::has_before_begin<R2>
           && __detail::has_splice_after<R1, R2>));
 
+/**
+ * @brief Moves the elements in the corange (lt, rt] of the source
+ *        range after the specified position in the destination range
+ * @param pos must be a valid left limit of dst_range (i.e., a front
+ *        sentinel or a dereferenceable iterator)
+ * @param lt must be a valid left limit of src_range (i.e., a front
+ *        sentinel or a dereferenceable iterator)
+ * @param rt must be a dereferenceable iterator of src_range, such
+ *        that (lt, rt] is a valid corange (in particular, lt != rt)
+ * @note  The behaviour is undefined if pos is in (lt, rt] or is equal
+ *        to lt (when dst_range and src_range are the same)
+ **/
+template <ranges::forward_range D, ranges::forward_range S,
+          left_limit_of<D> P, left_limit_of<S> L>
+  requires(spliceable_with_range<D, S>)
+constexpr void cosplice(D&& dst_range, const P pos, S&& src_range, const L lt,
+                        const ranges::iterator_t<S> rt) {
+  if constexpr (__detail::has_splice<D, S>)
+    dst_range.splice(after(dst_range, pos),
+                     src_range, after(src_range, lt), ranges::next(rt));
+  else
+    /* splice_after() should always be the least priority option
+     * because it may require traversal of the source range to
+     * identify its last element (which gives O(n) complexity as in
+     * std::forward_list) */
+    dst_range.splice_after(pos, src_range, lt, ranges::next(rt));
+}
+
+/**
+ * @brief Moves the element immediately following the one pointed to
+ *        by (it) in the source range after the specified position in
+ *        the destination range
+ * @param pos must be a valid left limit of dst_range (i.e., a front
+ *        sentinel or a dereferenceable iterator)
+ * @param it must be a valid left limit of src_range (i.e., a front
+ *        sentinel or a dereferenceable iterator), such that
+ *        after(src_range, it) is dereferenceable
+ * @note  The behaviour is undefined if pos is equal to (it) or to
+ *        after(src_range, it) (when dst_range and src_range are the
+ *        same)
+ **/
+template <ranges::forward_range D, ranges::forward_range S,
+          left_limit_of<D> P, left_limit_of<S> I>
+  requires(spliceable_with_range<D, S>)
+constexpr void cosplice(D&& dst_range, const P pos, S&& src_range, const I it) {
+  if constexpr (__detail::has_splice_after<D, S>)
+    dst_range.splice_after(pos, src_range, it);
+  else
+    dst_range.splice(after(dst_range, pos), src_range, after(src_range, it));
+}
+
 } // namespace enranged
