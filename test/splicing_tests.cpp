@@ -80,6 +80,55 @@ protected:
     }
   }
 
+  void test_cosplice_range(const size_t size, const bool same_ranges) {
+    for (size_t pos = 0; pos <= size; ++pos) {
+      for (size_t left = 0; left < size; ++left) {
+        for (size_t right = left + 1; right <= size; ++right) {
+          if (same_ranges && pos >= left && pos <= right)
+            continue;  // Skip Ub
+
+          auto [range1, range2, test_range1, test_range2]
+            = rebuild_ranges(size, same_ranges);
+
+          // Do the main splicing
+          auto right_it = ranges::next(ranges::begin(range2), right - 1);
+          if (pos == 0) {
+            if (left == 0)
+              cosplice(range1, before_begin(range1),
+                       range2, before_begin(range2), right_it);
+            else
+              cosplice(range1, before_begin(range1),
+                       range2, ranges::next(ranges::begin(range2), left - 1),
+                       right_it);
+          }
+          else {
+            const auto pos_it = ranges::next(ranges::begin(range1), pos - 1);
+
+            if (left == 0)
+              cosplice(range1, pos_it,
+                       range2, enranged::before_begin(range2), right_it);
+            else
+              cosplice(range1, pos_it,
+                       range2, ranges::next(ranges::begin(range2), left - 1),
+                       right_it);
+          }
+
+          // Do the equivalent thing with a test range using STL
+          test_range1.splice_after(ranges::next(test_range1.before_begin(),
+                                                pos),
+                                   test_range2,
+                                   ranges::next(test_range2.before_begin(),
+                                                left),
+                                   ranges::next(test_range2.begin(), right));
+
+          // And finally compare
+          test_equal_ranges(range1, test_range1);
+          if (!same_ranges) test_equal_ranges(range2, test_range2);
+        }
+      }
+    }
+  }
+
 private:
   T range1_, range2_;
   test_range_t test_range1_, test_range2_;
@@ -98,7 +147,17 @@ TYPED_TEST(SplicingTests, cosplice_inplace_single) {
   this->test_cosplice_single(EltsCount, /*same_ranges=*/true);
 }
 
+TYPED_TEST(SplicingTests, cosplice_inplace_range) {
+  constexpr size_t EltsCount = 10;
+  this->test_cosplice_range(EltsCount, /*same_ranges=*/true);
+}
+
 TYPED_TEST(SplicingTests, cosplice_single) {
   constexpr size_t EltsCount = 10;
   this->test_cosplice_single(EltsCount, /*same_ranges=*/false);
+}
+
+TYPED_TEST(SplicingTests, cosplice_range) {
+  constexpr size_t EltsCount = 10;
+  this->test_cosplice_range(EltsCount, /*same_ranges=*/false);
 }
