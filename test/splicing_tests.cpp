@@ -5,6 +5,8 @@
 
 #include "enranged/splicing.hpp"
 
+#include "linked_list.hpp"
+
 using namespace enranged;
 
 template <typename T>
@@ -33,8 +35,7 @@ private:
     return { range1_, range2_, test_range1_, test_range2_ };
   }
 
-  auto test_equal_ranges(const T& result,
-                         const test_range_t& expected) noexcept {
+  auto test_equal_ranges(T& result, test_range_t& expected) noexcept {
     auto it = ranges::begin(result);
     for (const auto& val : expected) { EXPECT_EQ(*it++, val); }
     EXPECT_EQ(it, ranges::end(result));
@@ -134,7 +135,8 @@ private:
   test_range_t test_range1_, test_range2_;
 };
 
-using Spliceable = ::testing::Types<std::list<int>, std::forward_list<int>>;
+using Spliceable = ::testing::Types<std::list<int>, std::forward_list<int>,
+                                    linked_list<int>>;
 TYPED_TEST_SUITE(SplicingTests, Spliceable);
 
 TYPED_TEST(SplicingTests, concepts) {

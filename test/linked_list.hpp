@@ -1,6 +1,8 @@
 #pragma once
 #include <cstddef>
 
+#include "enranged/limits.hpp"
+
 using std::size_t;
 
 /**
@@ -15,7 +17,14 @@ private:
   };
 
 public:
-  linked_list() noexcept = default;
+  using value_type = T;
+
+  linked_list(const size_t size): head_(nullptr) {
+    for (size_t i = 0; i < size; ++i)
+      emplace_front();
+  }
+
+  linked_list() noexcept: linked_list(0) {}
   ~linked_list() noexcept { delete_all(); }
 
   linked_list(const linked_list&) = delete;
@@ -96,6 +105,36 @@ public:
 
   iterator last() noexcept {
     return { last_ };
+  }
+
+  template <enranged::left_limit_of<linked_list> P,
+            enranged::left_limit_of<linked_list> L>
+  void cosplice(const P pos, linked_list& other, const L lt,
+                const iterator rt) noexcept {
+    node_t* left_node;
+    if constexpr (std::same_as<L, iterator>) {
+      left_node = lt.ptr_->next;
+      lt.ptr_->next = rt.ptr_->next;
+    }
+    else {
+      left_node = other.head_;
+      other.head_ = rt.ptr_->next;
+    }
+
+    if constexpr (std::same_as<P, iterator>) {
+      rt.ptr_->next = pos.ptr_->next;
+      pos.ptr_->next = left_node;
+    }
+    else {
+      rt.ptr_->next = head_;
+      head_ = left_node;
+    }
+  }
+
+  template <enranged::left_limit_of<linked_list> P,
+            enranged::left_limit_of<linked_list> I>
+  void cosplice(const P pos, linked_list& other, const I it) noexcept {
+    cosplice(pos, other, it, enranged::after(other, it));
   }
 
 private:
