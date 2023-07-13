@@ -47,4 +47,21 @@ concept has_splice_after =
   has_splice_after_at<R1, R2, front_sentinel_t<R1>>
   && has_splice_after_at<R1, R2, ranges::iterator_t<R1>>;
 
+template <typename R1, typename R2, typename P, typename L>
+concept has_cosplice_at_left = requires(R1 obj, R2 src, P pos, L lt,
+                                        ranges::iterator_t<R2> it) {
+  obj.cosplice(pos, src, lt);
+  obj.cosplice(pos, src, lt, it);
+};
+
+template <typename R1, typename R2, typename P>
+concept has_cosplice_at =
+  has_cosplice_at_left<R1, R2, P, front_sentinel_t<R2>>
+  && has_cosplice_at_left<R1, R2, P, ranges::iterator_t<R2>>;
+
+template <typename R1, typename R2>
+concept has_cosplice =
+  has_cosplice_at<R1, R2, front_sentinel_t<R1>>
+  && has_cosplice_at<R1, R2, ranges::iterator_t<R1>>;
+
 } // namespace enranged::__detail
