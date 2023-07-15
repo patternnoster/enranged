@@ -12,16 +12,34 @@
 
 using namespace enranged;
 
+struct test_type {
+  int value;
+  size_t count;
+
+  bool operator==(const test_type&) const noexcept = default;
+};
+
 template <typename T>
 class SortingTests: public ::testing::Test {
 protected:
+  constexpr static bool is_stability_test =
+    std::same_as<typename T::value_type, test_type>;
+
   void build_test_vec(const size_t size) {
     test_vec = decltype(test_vec)(size);
 
-    std::mt19937 gen{unsigned(rand())};
-    ranges::generate(test_vec, [&gen]() {
-      return std::uniform_int_distribution{}(gen);
-    });
+    if constexpr (is_stability_test) {
+      size_t ctr = 0;
+      ranges::generate(this->test_vec, [&ctr]() {
+        return test_type{rand() % 8, ++ctr};
+      });
+    }
+    else {
+      std::mt19937 gen{unsigned(rand())};
+      ranges::generate(test_vec, [&gen]() {
+        return std::uniform_int_distribution{}(gen);
+      });
+    }
   }
 
   void build_range() {
@@ -31,7 +49,11 @@ protected:
 
   void test_sorted(const ranges::iterator_t<T> back_it,
                    const auto test_begin, const auto test_end) {
-    ranges::sort(test_begin, test_end);
+    if constexpr (is_stability_test)
+      ranges::stable_sort(test_begin, test_end,
+                          std::greater{}, &test_type::value);
+    else
+      ranges::sort(test_begin, test_end);
 
     EXPECT_EQ(*back_it, *ranges::prev(test_end));
 
@@ -44,7 +66,9 @@ protected:
 };
 
 using SpliceSortable =
-  ::testing::Types<std::list<int>, std::forward_list<int>, linked_list<int>>;
+  ::testing::Types<std::list<int>, std::forward_list<int>, linked_list<int>,
+                   std::list<test_type>, std::forward_list<test_type>,
+                   linked_list<test_type>>;
 TYPED_TEST_SUITE(SortingTests, SpliceSortable);
 
 TYPED_TEST(SortingTests, coinplace_merge_splice) {
@@ -59,8 +83,16 @@ TYPED_TEST(SortingTests, coinplace_merge_splice) {
         const auto test_mid = ranges::next(this->test_vec.begin(), mid);
         const auto test_end = ranges::next(test_mid, (right - mid));
 
-        ranges::sort(test_begin, test_mid);
-        ranges::sort(test_mid, test_end);
+        if constexpr (SortingTests<TypeParam>::is_stability_test) {
+          ranges::stable_sort(test_begin, test_mid,
+                              std::greater{}, &test_type::value);
+          ranges::stable_sort(test_mid, test_end,
+                              std::greater{}, &test_type::value);
+        }
+        else {
+          ranges::sort(test_begin, test_mid);
+          ranges::sort(test_mid, test_end);
+        }
 
         this->build_range();
 
@@ -70,15 +102,26 @@ TYPED_TEST(SortingTests, coinplace_merge_splice) {
 
         ranges::iterator_t<TypeParam> result;
         if (left == 0) {
-          result = coinplace_merge_splice(this->range,
-                                          before_begin(this->range),
-                                          range_mid, range_last);
+          if constexpr (SortingTests<TypeParam>::is_stability_test)
+            result = coinplace_merge_splice(this->range,
+                                            before_begin(this->range),
+                                            range_mid, range_last,
+                                            std::greater{}, &test_type::value);
+          else
+            result = coinplace_merge_splice(this->range,
+                                            before_begin(this->range),
+                                            range_mid, range_last);
         }
         else {
           const auto range_left =
             ranges::next(ranges::begin(this->range), left - 1);
-          result = coinplace_merge_splice(this->range, range_left,
-                                          range_mid, range_last);
+          if constexpr (SortingTests<TypeParam>::is_stability_test)
+            result = coinplace_merge_splice(this->range, range_left,
+                                            range_mid, range_last,
+                                            std::greater{}, &test_type::value);
+          else
+            result = coinplace_merge_splice(this->range, range_left,
+                                            range_mid, range_last);
         }
 
         this->test_sorted(result, test_begin, test_end);
