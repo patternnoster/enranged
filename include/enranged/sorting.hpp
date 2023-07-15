@@ -5,6 +5,8 @@
 
 #include "splicing.hpp"
 
+#include "__detail/sorting_impl.hpp"
+
 /**
  * @file
  * Additional sorting algorithms for certain kinds of ranges
@@ -76,8 +78,12 @@ template <spliceable_range R, left_limit_of<R> L,
           typename Comp = ranges::less, typename Proj = std::identity>
   requires(splice_sortable_range<R, Comp, Proj>)
 constexpr ranges::borrowed_iterator_t<R> coinplace_merge_splice
-  (R&& range, const L left, const ranges::iterator_t<R> mid,
-   const ranges::iterator_t<R> right,
-   const Comp comp = {}, const Proj proj = {});
+  (R&& range, const L left,
+   const ranges::iterator_t<R> mid, const ranges::iterator_t<R> right,
+   const Comp comp = {}, const Proj proj = {}) {
+  return
+    __detail::coinplace_merge_splice(std::forward<R>(range), left, mid, right,
+                                     __detail::project_predicate(comp, proj));
+}
 
 } // namespace enranged
