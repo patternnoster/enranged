@@ -2,6 +2,7 @@ cmake_minimum_required(VERSION 3.23)
 
 add_executable(enranged_tests
   limits_tests.cpp
+  sorting_tests.cpp
   splicing_tests.cpp
 )
 target_link_libraries(enranged_tests PRIVATE enranged gtest_main)
