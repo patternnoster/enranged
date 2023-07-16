@@ -93,4 +93,10 @@ constexpr ranges::borrowed_iterator_t<R> coinplace_merge_splice
   }
 }
 
+template <typename R, left_limit_of<R> L, typename Comp>
+constexpr ranges::borrowed_iterator_t<R> insertion_sort_splice
+  (R&& range, const L left_limit, const size_t count, const Comp comp) {
+  return after(range, left_limit);
+}
+
 } // namespace enranged::__detail

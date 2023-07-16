@@ -86,4 +86,29 @@ constexpr ranges::borrowed_iterator_t<R> coinplace_merge_splice
                                      __detail::project_predicate(comp, proj));
 }
 
+/**
+ * @brief  Performs a splice-based version of the stable insertion
+ *         sorting algorithm on the corange (left, left + count] and
+ *         returns an iterator to its last element
+ * @tparam Comp must be a strict weak order (see above)
+ * @param  left must be a valid left limit of the given range (i.e., a
+ *         front sentinel or a dereferenceable iterator)
+ * @param  count must not be greater than the number of elements
+ *         following left in the given range
+ * @return An iterator to the last element of the sorted corange (or
+ *         after(range, left) if count is zero)
+ * @note   Insertion sort works best on small or almost sorted ranges,
+ *         otherwise a different algorithm should be chosen
+ **/
+template <spliceable_range R, left_limit_of<R> L,
+          typename Comp = ranges::less, typename Proj = std::identity>
+  requires(splice_sortable_range<R, Comp, Proj>)
+constexpr ranges::borrowed_iterator_t<R> insertion_sort_splice
+  (R&& range, const L left, const size_t count,
+   const Comp comp = {}, const Proj proj = {}) {
+  return
+    __detail::insertion_sort_splice(std::forward<R>(range), left, count,
+                                    __detail::project_predicate(comp, proj));
+}
+
 } // namespace enranged
