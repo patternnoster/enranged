@@ -129,3 +129,43 @@ TYPED_TEST(SortingTests, coinplace_merge_splice) {
     }
   }
 }
+
+TYPED_TEST(SortingTests, insertion_sort_splice) {
+  constexpr size_t Runs = 100;
+  constexpr size_t MaxElts = 1000;
+
+  for (size_t i = 0; i < Runs; ++i) {
+    const size_t skip_left = rand() % 10;
+    const size_t skip_right = rand() % 10;
+
+    const size_t size =  // Use i==0 to test the border case
+      1 + (i > 0)*(rand() % MaxElts) + skip_left + skip_right;
+
+    this->build_test_vec(size);
+    this->build_range();
+
+    ranges::iterator_t<TypeParam> result;
+    if (skip_left == 0) {
+      const auto count = this->test_vec.size() - skip_right;
+      if constexpr (SortingTests<TypeParam>::is_stability_test)
+        result =
+          insertion_sort_splice(this->range, before_begin(this->range), count,
+                                std::greater{}, &test_type::value);
+      else
+        result =
+          insertion_sort_splice(this->range, before_begin(this->range), count);
+    }
+    else {
+      const auto left = ranges::next(ranges::begin(this->range), skip_left - 1);
+      const auto count = this->test_vec.size() - skip_left - skip_right;
+      if constexpr (SortingTests<TypeParam>::is_stability_test)
+        result = insertion_sort_splice(this->range, left, count,
+                                       std::greater{}, &test_type::value);
+      else
+        result = insertion_sort_splice(this->range, left, count);
+    }
+
+    this->test_sorted(result, this->test_vec.begin() + skip_left,
+                      this->test_vec.end() - skip_right);
+  }
+}
