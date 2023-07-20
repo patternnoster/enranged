@@ -95,8 +95,53 @@ constexpr ranges::borrowed_iterator_t<R> coinplace_merge_splice
 
 template <typename R, left_limit_of<R> L, typename Comp>
 constexpr ranges::borrowed_iterator_t<R> insertion_sort_splice
-  (R&& range, const L left_limit, const size_t count, const Comp comp) {
-  return after(range, left_limit);
+  (R&& range, const L left_limit, size_t size, const Comp comp) {
+  auto first = after(range, left_limit);
+  if (size < 2) [[unlikely]] return first;
+
+  auto lhs = first;  // Last sorted
+
+  // Deal with the first two elements separately to avoid an
+  // unnecessary comparison
+  auto rhs = ranges::next(lhs);
+  if (!comp(*rhs, *lhs)) lhs = rhs;
+  else {
+    cosplice(range, left_limit, lhs);
+    first = rhs;
+  }
+
+  size-= 2;
+  for (; size; --size) {
+    rhs = ranges::next(lhs);
+    // First determine the position of where we can put the rhs
+
+    if (!comp(*rhs, *lhs)) {
+      // Here *lhs <= *rhs and we can just fast-forward
+      lhs = rhs;
+      continue;
+    }
+
+    // NB: lhs won't change this time from now one
+
+    /* Check if rhs should be put to the very front (note that since
+     * we dealt with the first element separately, lhs != first, so
+     * this is not a waste of a comparison anyway */
+    if (comp(*rhs, *first)) {
+      cosplice(range, left_limit, lhs);
+      first = rhs;
+      continue;
+    }
+
+    // Okay, so *first <= *rhs < *lhs, so we can iterate to find the
+    // last element on the (sorted left) that is <= *rhs
+    auto pos = first;
+    for (auto pos_next = ranges::next(pos); !comp(*rhs, *pos_next);
+         pos = pos_next++);
+
+    cosplice(range, pos, lhs);
+  }
+
+  return lhs;
 }
 
 } // namespace enranged::__detail
