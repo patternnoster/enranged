@@ -144,4 +144,10 @@ constexpr ranges::borrowed_iterator_t<R> insertion_sort_splice
   return lhs;
 }
 
+template <typename R, left_limit_of<R> L, typename Comp>
+constexpr ranges::borrowed_iterator_t<R> merge_sort_splice
+  (R&& range, const L left, const size_t size, const Comp comp) {
+  return after(range, left);
+}
+
 } // namespace enranged::__detail
