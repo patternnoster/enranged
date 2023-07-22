@@ -1,5 +1,6 @@
 #pragma once
 #include <concepts>
+#include <cstdint>
 #include <functional>
 #include <iterator>
 #include <type_traits>
@@ -147,7 +148,44 @@ constexpr ranges::borrowed_iterator_t<R> insertion_sort_splice
 template <typename R, left_limit_of<R> L, typename Comp>
 constexpr ranges::borrowed_iterator_t<R> merge_sort_splice
   (R&& range, const L left, const size_t size, const Comp comp) {
-  return after(range, left);
+  constexpr size_t MergeThreshold = 4; // Use insertions if smaller
+                                       // (must be a power of 2)
+
+  /* Let L = ceil(log2(size+1)) and S(k) = size >> (L-k).
+   * At step k we assume that the first S(k) elements are already
+   * sorted. We apply merge_sort recursively to the next S(k+1)-S(k)
+   * (which equals either S(k) or S(k)+1) elements, then we
+   * inplace_merge the result with the first elements and move to the
+   * next step.
+   * This approach gives the most balanced division. Obviously, after
+   * step L-1 is finished, the range is sorted.
+   * If T = log2(MergeThreshold), then we can apply insertion sort to
+   * the first S(T) elements and then start with k=T */
+  const size_t max_steps = 64 - std::countl_zero(uint64_t(size)); // L
+  constexpr size_t first_step = std::countr_zero(MergeThreshold); // T
+
+  size_t l_cnt = max_steps <= first_step ? size
+    : size >> (max_steps - first_step);
+  auto last_sorted =
+    __detail::insertion_sort_splice(std::forward<R>(range), left, l_cnt, comp);
+
+  // Invariant: [begin(range), last_sorted] is already sorted and
+  // contains l_cnt elements
+  for (size_t step = first_step; step < max_steps; ++step) {
+    const size_t to_sort = (size >> (max_steps - step - 1)) - l_cnt;
+
+    const auto last_sorted_right =
+      __detail::merge_sort_splice(std::forward<R>(range),
+                                  last_sorted, to_sort, comp);
+
+    last_sorted =
+      __detail::coinplace_merge_splice(std::forward<R>(range), left,
+                                       last_sorted, last_sorted_right, comp);
+
+    l_cnt+= to_sort;
+  }
+
+  return last_sorted;
 }
 
 } // namespace enranged::__detail
