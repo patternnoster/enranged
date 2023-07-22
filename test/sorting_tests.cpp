@@ -4,6 +4,7 @@
 #include <limits>
 #include <list>
 #include <random>
+#include <utility>
 #include <vector>
 
 #include "enranged/sorting.hpp"
@@ -45,6 +46,19 @@ protected:
   void build_range() {
     range = T(test_vec.size());
     ranges::copy(test_vec, ranges::begin(range));
+  }
+
+  auto build_all_for_sorting(const size_t max_size) {
+    const size_t skip_left = rand() % 10;
+    const size_t skip_right = rand() % 10;
+
+    const size_t size =
+      1 + rand() % max_size + skip_left + skip_right;
+
+    this->build_test_vec(size);
+    this->build_range();
+
+    return std::make_pair(skip_left, skip_right);
   }
 
   void test_sorted(const ranges::iterator_t<T> back_it,
@@ -135,14 +149,8 @@ TYPED_TEST(SortingTests, insertion_sort_splice) {
   constexpr size_t MaxElts = 1000;
 
   for (size_t i = 0; i < Runs; ++i) {
-    const size_t skip_left = rand() % 10;
-    const size_t skip_right = rand() % 10;
-
-    const size_t size =  // Use i==0 to test the border case
-      1 + (i > 0)*(rand() % MaxElts) + skip_left + skip_right;
-
-    this->build_test_vec(size);
-    this->build_range();
+    auto [skip_left, skip_right] =
+      this->build_all_for_sorting(i == 0 ? 1 : MaxElts);
 
     ranges::iterator_t<TypeParam> result;
     if (skip_left == 0) {
@@ -163,6 +171,40 @@ TYPED_TEST(SortingTests, insertion_sort_splice) {
                                        std::greater{}, &test_type::value);
       else
         result = insertion_sort_splice(this->range, left, count);
+    }
+
+    this->test_sorted(result, this->test_vec.begin() + skip_left,
+                      this->test_vec.end() - skip_right);
+  }
+}
+
+TYPED_TEST(SortingTests, merge_sort_splice) {
+  constexpr size_t Runs = 100;
+  constexpr size_t MaxElts = 1000;
+
+  for (size_t i = 0; i < Runs; ++i) {
+    auto [skip_left, skip_right] =
+      this->build_all_for_sorting(i == 0 ? 1 : MaxElts);
+
+    ranges::iterator_t<TypeParam> result;
+    if (skip_left == 0) {
+      const auto count = this->test_vec.size() - skip_right;
+      if constexpr (SortingTests<TypeParam>::is_stability_test)
+        result =
+          merge_sort_splice(this->range, before_begin(this->range), count,
+                            std::greater{}, &test_type::value);
+      else
+        result =
+          merge_sort_splice(this->range, before_begin(this->range), count);
+    }
+    else {
+      const auto left = ranges::next(ranges::begin(this->range), skip_left - 1);
+      const auto count = this->test_vec.size() - skip_left - skip_right;
+      if constexpr (SortingTests<TypeParam>::is_stability_test)
+        result = merge_sort_splice(this->range, left, count,
+                                   std::greater{}, &test_type::value);
+      else
+        result = merge_sort_splice(this->range, left, count);
     }
 
     this->test_sorted(result, this->test_vec.begin() + skip_left,
