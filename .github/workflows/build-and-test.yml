@@ -37,7 +37,7 @@ jobs:
           CC: ${{ matrix.os == 'macos-latest' && 'clang' || matrix.compiler }}
           CXX: ${{ matrix.compiler == 'gcc-13' && 'g++-13' || matrix.os == 'macos-latest' && 'clang++' || 'clang++-16' }}
           toolset: ${{ matrix.os == 'windows-latest' && matrix.compiler == 'clang-16' && 'ClangCL' || null }}
-        run: cmake . -Bbuild -DENRANGED_BUILD_TESTS=ON ${{ env.toolset && format('-T {0}', env.toolset) }} ${{ matrix.stdlib && format('-DCMAKE_CXX_FLAGS=-stdlib={0}', matrix.stdlib) }}
+        run: cmake . -Bbuild -DENRANGED_BUILD_TESTS=ON -DENRANGED_BUILD_BENCHMARKS=ON ${{ env.toolset && format('-T {0}', env.toolset) }} ${{ matrix.stdlib && format('-DCMAKE_CXX_FLAGS=-stdlib={0}', matrix.stdlib) }}
       - name: build
         run: cmake --build build
       - name: test
