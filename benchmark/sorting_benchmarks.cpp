@@ -2,11 +2,14 @@
 #include <cstdlib>
 #include <forward_list>
 #include <list>
+#include <memory>
 #include <random>
 #include <ranges>
 #include <vector>
 
 #include "enranged/sorting.hpp"
+
+#include "shuffled_memory_resource.hpp"
 
 namespace ranges = std::ranges;
 
@@ -27,38 +30,73 @@ const static auto test_vec = []() {
   return result;
  }();
 
+static shuffled_memory_resource<MaxSize + 42> memory_resource{};
+
+template <typename T>
+class shuffled_allocator {
+public:
+  static_assert(sizeof(T) <= decltype(memory_resource)::max_alloc);
+  using value_type = T;
+
+  shuffled_allocator() noexcept = default;
+
+  template <typename U>
+  shuffled_allocator(const shuffled_allocator<U>&) noexcept {}
+
+  bool operator==(const shuffled_allocator&) const noexcept = default;
+
+  static size_t max_size() noexcept {
+    return 1;
+  }
+
+  T* allocate(const size_t size) const noexcept {
+    if (size != 1) return nullptr;
+    return static_cast<T*>(memory_resource.allocate());
+  }
+
+  void deallocate(void*, const size_t) const noexcept {}
+};
+
 template <typename T>
 class SortingBenchmarks: public benchmark::Fixture {
 protected:
-  void rebuild_stl_list(::benchmark::State& state) {
+  T& rebuild_stl_list(::benchmark::State& state) {
     state.PauseTiming();  // This has some performance penalty but it
                           // doesn't matter with our orders
-    range.clear();
-    range = T(test_vec.begin(), test_vec.begin() + state.range(0));
+    range_.reset();
+    memory_resource.reset();
+
+    range_ = std::make_unique<T>(test_vec.begin(),
+                                 test_vec.begin() + state.range(0));
 
     benchmark::ClobberMemory();
     state.ResumeTiming();
+
+    return *range_;
   }
 
-  T range;
+private:
+  std::unique_ptr<T> range_;
 };
 
 BENCHMARK_TEMPLATE_DEFINE_F(SortingBenchmarks, merge_sort_list,
-                            std::list<int>)(benchmark::State& state) {
+                            std::list<int, shuffled_allocator<int>>)
+  (benchmark::State& state) {
   for (auto _ : state) {
-    this->rebuild_stl_list(state);
-    enranged::merge_sort_splice(this->range,
-                                enranged::before_begin(this->range),
-                                ranges::size(this->range));
+    auto& range = this->rebuild_stl_list(state);
+    enranged::merge_sort_splice(range,
+                                enranged::before_begin(range),
+                                ranges::size(range));
   }
 }
 
 BENCHMARK_TEMPLATE_DEFINE_F(SortingBenchmarks, merge_sort_forward_list,
-                            std::forward_list<int>)(benchmark::State& state) {
+                            std::forward_list<int, shuffled_allocator<int>>)
+  (benchmark::State& state) {
   for (auto _ : state) {
-    this->rebuild_stl_list(state);
-    enranged::merge_sort_splice(this->range,
-                                enranged::before_begin(this->range),
+    auto& range = this->rebuild_stl_list(state);
+    enranged::merge_sort_splice(range,
+                                enranged::before_begin(range),
                                 state.range(0));
   }
 }
