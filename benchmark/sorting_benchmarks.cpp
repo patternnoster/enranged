@@ -90,6 +90,15 @@ BENCHMARK_TEMPLATE_DEFINE_F(SortingBenchmarks, merge_sort_list,
   }
 }
 
+BENCHMARK_TEMPLATE_DEFINE_F(SortingBenchmarks, std_sort_list,
+                            std::list<int, shuffled_allocator<int>>)
+  (benchmark::State& state) {
+  for (auto _ : state) {
+    auto& range = this->rebuild_stl_list(state);
+    range.sort();
+  }
+}
+
 BENCHMARK_TEMPLATE_DEFINE_F(SortingBenchmarks, merge_sort_forward_list,
                             std::forward_list<int, shuffled_allocator<int>>)
   (benchmark::State& state) {
@@ -101,10 +110,28 @@ BENCHMARK_TEMPLATE_DEFINE_F(SortingBenchmarks, merge_sort_forward_list,
   }
 }
 
+BENCHMARK_TEMPLATE_DEFINE_F(SortingBenchmarks, std_sort_forward_list,
+                            std::forward_list<int, shuffled_allocator<int>>)
+  (benchmark::State& state) {
+  for (auto _ : state) {
+    auto& range = this->rebuild_stl_list(state);
+    range.sort();
+  }
+}
+
 BENCHMARK_REGISTER_F(SortingBenchmarks, merge_sort_list)
   ->RangeMultiplier(Multiplier)->Range(MinSize, MaxSize)
   ->Unit(benchmark::kMicrosecond);
 
+BENCHMARK_REGISTER_F(SortingBenchmarks, std_sort_list)
+  ->RangeMultiplier(Multiplier)->Range(MinSize, MaxSize)
+  ->Unit(benchmark::kMicrosecond);
+
+
 BENCHMARK_REGISTER_F(SortingBenchmarks, merge_sort_forward_list)
+  ->RangeMultiplier(Multiplier)->Range(MinSize, MaxSize)
+  ->Unit(benchmark::kMicrosecond);
+
+BENCHMARK_REGISTER_F(SortingBenchmarks, std_sort_forward_list)
   ->RangeMultiplier(Multiplier)->Range(MinSize, MaxSize)
   ->Unit(benchmark::kMicrosecond);
