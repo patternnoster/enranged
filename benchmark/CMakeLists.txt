@@ -6,3 +6,4 @@ endif()
 
 add_executable(sorting_benchmarks sorting_benchmarks.cpp)
 target_link_libraries(sorting_benchmarks PRIVATE enranged benchmark_main)
+target_include_directories(sorting_benchmarks PRIVATE ${CMAKE_SOURCE_DIR}/test)
