@@ -28,20 +28,26 @@ public:
       emplace_front();
   }
 
+  template <typename I>
+  linked_list(const I begin, const I end) {
+    for (auto it = begin; it != end; ++it)
+      emplace_back(*it);
+  }
+
   linked_list() noexcept: linked_list(0) {}
-  ~linked_list() noexcept { delete_all(); }
+  ~linked_list() noexcept { clear(); }
 
   linked_list(const linked_list&) = delete;
   linked_list& operator=(const linked_list&) = delete;
 
   linked_list(linked_list&& rhs) noexcept {
-    delete_all();
+    clear();
     move_from(std::move(rhs));
   }
 
   linked_list& operator=(linked_list&& rhs) noexcept {
     if (this != std::addressof(rhs)) {
-      delete_all();
+      clear();
       move_from(std::move(rhs));
     }
     return *this;
@@ -55,6 +61,21 @@ public:
     };
 
     if (!last_) last_ = head_;
+    ++size_;
+  }
+
+  template <typename... Args>
+  void emplace_back(Args&&... args) {
+    const auto new_node = new (allocator_.allocate(1)) node_t {
+      .value = T{std::forward<Args>(args)...},
+      .next = nullptr
+    };
+
+    if (last_) last_->next = new_node;
+    else head_ = new_node;
+
+    last_ = new_node;
+    ++size_;
   }
 
   class iterator {
@@ -109,6 +130,10 @@ public:
     return { last_ };
   }
 
+  size_t size() const noexcept {
+    return size_;
+  }
+
   template <enranged::left_limit_of<linked_list> P,
             enranged::left_limit_of<linked_list> L>
   void cosplice(const P pos, linked_list& other, const L lt,
@@ -139,8 +164,7 @@ public:
     cosplice(pos, other, it, enranged::after(other, it));
   }
 
-private:
-  void delete_all() noexcept {
+  void clear() noexcept {
     auto node = head_;
     while (node) {
       const auto next_node = node->next;
@@ -150,17 +174,21 @@ private:
     }
 
     head_ = last_ = nullptr;
+    size_ = 0;
   }
 
+private:
   void move_from(linked_list&& rhs) {
     std::swap(head_, rhs.head_);
     std::swap(last_, rhs.last_);
+    std::swap(size_, rhs.size_);
 
     allocator_ = std::move(rhs.allocator_);
   }
 
   node_t* head_ = nullptr;
   node_t* last_ = nullptr;
+  size_t size_ = 0;
 
   allocator_t allocator_;
 
