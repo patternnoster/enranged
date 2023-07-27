@@ -87,6 +87,29 @@ constexpr ranges::borrowed_iterator_t<R> coinplace_merge_splice
 }
 
 /**
+ * @brief  Given a spliceable corange (a, b] and its iterator mid,
+ *         assumes the subranges (a, mid] and (mid, b] are sorted,
+ *         performs a stable inplace splice-based merge into one
+ *         sorted range and returns an iterator to its last element
+ * @tparam Comp must be a strict weak order (see above)
+ * @param  mid must be a dereferenceable iterator in range
+ * @return An iterator to the last element of the given range after
+ *         merge (i.e., last(range))
+ * @note   The behaviour is undefined if either (before_begin(range),
+ *         mid] or (mid, last(range)] are not sorted
+ **/
+template <spliceable_range R,
+          typename Comp = ranges::less, typename Proj = std::identity>
+  requires(corange<R> && splice_sortable_range<R, Comp, Proj>)
+constexpr ranges::borrowed_iterator_t<R> coinplace_merge_splice
+  (R&& range, const ranges::iterator_t<R> mid,
+   const Comp comp = {}, const Proj proj = {}) {
+  return
+    coinplace_merge_splice(std::forward<R>(range), before_begin(range), mid,
+                           last(range), comp, proj);
+}
+
+/**
  * @brief  Performs a splice-based version of the stable insertion
  *         sorting algorithm on the corange (left, left + count] and
  *         returns an iterator to its last element
