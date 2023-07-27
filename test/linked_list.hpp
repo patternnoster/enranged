@@ -1,5 +1,6 @@
 #pragma once
 #include <cstddef>
+#include <memory>
 
 #include "enranged/limits.hpp"
 
@@ -8,13 +9,16 @@ using std::size_t;
 /**
  * @brief The simplest linked list for testing purposes
  **/
-template <typename T>
+template <typename T, typename Allocator = std::allocator<T>>
 class linked_list {
 private:
   struct node_t {
     T value;
     node_t* next;
   };
+
+  using allocator_t =
+    std::allocator_traits<Allocator>::template rebind_alloc<node_t>;
 
 public:
   using value_type = T;
@@ -32,22 +36,20 @@ public:
 
   linked_list(linked_list&& rhs) noexcept {
     delete_all();
-    std::swap(head_, rhs.head_);
-    std::swap(last_, rhs.last_);
+    move_from(std::move(rhs));
   }
 
   linked_list& operator=(linked_list&& rhs) noexcept {
     if (this != std::addressof(rhs)) {
       delete_all();
-      std::swap(head_, rhs.head_);
-      std::swap(last_, rhs.last_);
+      move_from(std::move(rhs));
     }
     return *this;
   }
 
   template <typename... Args>
   void emplace_front(Args&&... args) {
-    head_ = new node_t {
+    head_ = new (allocator_.allocate(1)) node_t {
       .value = T{std::forward<Args>(args)...},
       .next = head_
     };
@@ -142,14 +144,25 @@ private:
     auto node = head_;
     while (node) {
       const auto next_node = node->next;
-      delete node;
+      node->~node_t();
+      allocator_.deallocate(node, 1);
       node = next_node;
     }
 
     head_ = last_ = nullptr;
   }
 
+  void move_from(linked_list&& rhs) {
+    std::swap(head_, rhs.head_);
+    std::swap(last_, rhs.last_);
+
+    allocator_ = std::move(rhs.allocator_);
+  }
+
   node_t* head_ = nullptr;
   node_t* last_ = nullptr;
+
+  allocator_t allocator_;
+
   friend class iterator;
 };
