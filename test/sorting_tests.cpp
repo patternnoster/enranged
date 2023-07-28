@@ -211,3 +211,37 @@ TYPED_TEST(SortingTests, merge_sort_splice) {
                       this->test_vec.end() - skip_right);
   }
 }
+
+class SortingListTests: public SortingTests<std::list<int>> {};
+
+TEST_F(SortingListTests, alt_interfaces) {
+  this->build_test_vec(100);
+  const auto test_mid = ranges::next(this->test_vec.begin(), 42);
+
+  ranges::sort(this->test_vec.begin(), test_mid);
+  ranges::sort(test_mid, this->test_vec.end());
+
+  this->build_range();
+  const auto mid = ranges::next(ranges::begin(this->range), 41);
+  const auto result = coinplace_merge_splice(this->range, mid);
+
+  this->test_sorted(result, this->test_vec.begin(), this->test_vec.end());
+
+  for (size_t i = 0; i < 2; ++i) {
+    this->build_test_vec(100);
+    this->build_range();
+
+    const auto result = i == 0 ? insertion_sort_splice(this->range)
+      : merge_sort_splice(this->range);
+
+    this->test_sorted(result, this->test_vec.begin(), this->test_vec.end());
+  }
+
+  // Also test empty
+  this->range.clear();
+  const auto is_result = insertion_sort_splice(this->range);
+  const auto ms_result = merge_sort_splice(this->range);
+
+  ASSERT_EQ(is_result, ranges::end(this->range));
+  ASSERT_EQ(ms_result, ranges::end(this->range));
+}
