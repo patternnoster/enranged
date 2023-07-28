@@ -2,6 +2,7 @@
 #include <concepts>
 #include <functional>
 #include <iterator>
+#include <ranges>
 
 #include "splicing.hpp"
 
@@ -135,6 +136,25 @@ constexpr ranges::borrowed_iterator_t<R> insertion_sort_splice
 }
 
 /**
+ * @brief  Performs a splice-based version of the stable insertion
+ *         sorting algorithm on the given sized range and returns an
+ *         iterator to its last element
+ * @tparam Comp must be a strict weak order (see above)
+ * @return An iterator to the last element of the range (or equal to
+ *         end(range) if the range is empty)
+ * @note   Insertion sort works best on small or almost sorted ranges,
+ *         otherwise a different algorithm should be chosen
+ **/
+template <spliceable_range R,
+          typename Comp = ranges::less, typename Proj = std::identity>
+  requires(ranges::sized_range<R> && splice_sortable_range<R, Comp, Proj>)
+constexpr ranges::borrowed_iterator_t<R> insertion_sort_splice
+  (R&& range, const Comp comp = {}, const Proj proj = {}) {
+  return insertion_sort_splice(std::forward<R>(range), before_begin(range),
+                               ranges::size(range), comp, proj);
+}
+
+/**
  * @brief  Performs a cache-friendly splice-based version of the stable
  *         merge sorting algorithm on the corange (left, left + count]
  *         and returns an iterator to its last element
@@ -154,6 +174,23 @@ constexpr ranges::borrowed_iterator_t<R> merge_sort_splice
    const Comp comp = {}, const Proj proj = {}) {
   return __detail::merge_sort_splice(std::forward<R>(range), left, count,
                                      __detail::project_predicate(comp, proj));
+}
+
+/**
+ * @brief  Performs a cache-friendly splice-based version of the stable
+ *         merge sorting algorithm on the given sized range and
+ *         returns an iterator to its last element
+ * @tparam Comp must be a strict weak order (see above)
+ * @return An iterator to the last element of the range (or equal to
+ *         end(range) if the range is empty)
+ **/
+template <spliceable_range R,
+          typename Comp = ranges::less, typename Proj = std::identity>
+  requires(ranges::sized_range<R> && splice_sortable_range<R, Comp, Proj>)
+constexpr ranges::borrowed_iterator_t<R> merge_sort_splice
+  (R&& range, const Comp comp = {}, const Proj proj = {}) {
+  return merge_sort_splice(std::forward<R>(range), before_begin(range),
+                           ranges::size(range), comp, proj);
 }
 
 } // namespace enranged
