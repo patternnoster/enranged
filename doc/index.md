@@ -103,6 +103,104 @@ An iterator to the last element of the given range after merge (i.e., [**last(ra
 > [!NOTE]
 > The behaviour is undefined if either ([**before_begin(range)**](#before_begin), mid] or (mid, [**last(range)**](#last)] are not sorted.
 
+---
+
+### insertion_sort_splice
+<sub>Defined in header [&lt;enranged/sorting.hpp&gt;](/include/enranged/sorting.hpp)</sub>
+```c++
+template <spliceable_range R, left_limit_of<R> L,
+          typename Comp = std::ranges::less, typename Proj = std::identity>
+  requires(splice_sortable_range<R, Comp, Proj>)
+constexpr std::ranges::borrowed_iterator_t<R> insertion_sort_splice
+  (R&& range, L left, size_t count, Comp comp = {}, Proj proj = {});
+```
+Performs a splice-based version of the stable insertion sorting algorithm on the corange (left, left + count] and returns an iterator to its last element.
+
+**Template parameters**
+
+* `Comp` must be a strict weak order (see above)
+
+**Parameters**
+
+* `left` must be a valid left limit of the given range (i.e., a front sentinel or a dereferenceable iterator)
+* `count` must not be greater than the number of elements following `left` in the given range
+
+**Return value**
+
+An iterator to the last element of the sorted corange (or [**after(range, left)**](#after) if count is zero).
+
+> [!NOTE]
+> Insertion sort works best on small or almost sorted ranges, otherwise a different algorithm should be chosen.
+
+---
+
+<sub>Defined in header [&lt;enranged/sorting.hpp&gt;](/include/enranged/sorting.hpp)</sub>
+```c++
+template <spliceable_range R,
+          typename Comp = std::ranges::less, typename Proj = std::identity>
+  requires(std::ranges::sized_range<R> && splice_sortable_range<R, Comp, Proj>)
+constexpr std::ranges::borrowed_iterator_t<R> insertion_sort_splice
+  (R&& range, Comp comp = {}, Proj proj = {});
+```
+Performs a splice-based version of the stable insertion sorting algorithm on the given sized range and returns an iterator to its last element.
+
+**Template parameters**
+
+* `Comp` must be a strict weak order (see above)
+
+**Return value**
+
+An iterator to the last element of the range (or equal to **end(range)** if the range is empty).
+
+> [!NOTE]
+> Insertion sort works best on small or almost sorted ranges, otherwise a different algorithm should be chosen.
+
+---
+
+### merge_sort_splice
+<sub>Defined in header [&lt;enranged/sorting.hpp&gt;](/include/enranged/sorting.hpp)</sub>
+```c++
+template <spliceable_range R, left_limit_of<R> L,
+          typename Comp = std::ranges::less, typename Proj = std::identity>
+  requires(splice_sortable_range<R, Comp, Proj>)
+constexpr std::ranges::borrowed_iterator_t<R> merge_sort_splice
+  (R&& range, L left, size_t count, Comp comp = {}, Proj proj = {});
+```
+Performs a cache-friendly splice-based version of the stable merge sorting algorithm on the corange (left, left + count] and returns an iterator to its last element.
+
+**Template parameters**
+
+* `Comp` must be a strict weak order (see above)
+
+**Parameters**
+
+* `left` must be a valid left limit of the given range (i.e., a front sentinel or a dereferenceable iterator)
+* `count` must not be greater than the number of elements following `left` in the given range
+
+**Return value**
+
+An iterator to the last element of the sorted corange (or [**after(range, left)**](#after) if count is zero).
+
+---
+
+<sub>Defined in header [&lt;enranged/sorting.hpp&gt;](/include/enranged/sorting.hpp)</sub>
+```c++
+template <spliceable_range R,
+          typename Comp = std::ranges::less, typename Proj = std::identity>
+  requires(std::ranges::sized_range<R> && splice_sortable_range<R, Comp, Proj>)
+constexpr std::ranges::borrowed_iterator_t<R> merge_sort_splice
+  (R&& range, Comp comp = {}, Proj proj = {});
+```
+Performs a cache-friendly splice-based version of the stable merge sorting algorithm on the given sized range and returns an iterator to its last element.
+
+**Template parameters**
+
+* `Comp` must be a strict weak order (see above)
+
+**Return value**
+
+An iterator to the last element of the range (or equal to **end(range)** if the range is empty).
+
 # Splicing
 
 Splicing allows to cheaply reorder elements in a suitable range (e.g., linked list) without copying. The library formalizes this concept and introduces the notion of [cosplicing](#cosplice) that works with both singly and doubly linked lists but doesn't have the complexity penalty of `std::forward_list<T>::splice_after()`.
