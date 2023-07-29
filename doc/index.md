@@ -1,4 +1,7 @@
 # Spliced sorting
+
+The library contains several sorting algorithms that use splicing instead of moving/swapping elements and can be applied to [spliceable ranges](#spliceable_range) (i.e., ranges like `std::list` or `std::forward_list` that define `splice()`/`splice_after()`/`cosplice()` methods). Hence, those algorithms do not require the range value type to be movable or the iterator to be random_access or even bidirectional (like the standard `std::ranges::sort` does).
+
 ## Members
 ### Concepts
 
@@ -15,6 +18,9 @@
 | [**merge_sort_splice**](#merge_sort_splice) | performs a cache-friendly splice-based version of the stable merge sorting algorithm on the corange (left, left + count] and returns an iterator to its last element |
 
 # Splicing
+
+Splicing allows to cheaply reorder elements in a suitable range (e.g., linked list) without copying. The library formalizes this concept and introduces the notion of [cosplicing](#cosplice) that works with both singly and doubly linked lists but doesn't have the complexity penalty of `std::forward_list<T>::splice_after()`.
+
 ## Members
 ### Concepts
 
@@ -30,6 +36,9 @@
 | [**cosplice**](#cosplice) | moves the elements in the corange (lt, rt] of the source range after the specified position in the destination range |
 
 # Limits
+
+A range is a half-open interval [begin, end) defined by an iterator to its first element and a sentinel. This library allows to define and manipulate intervals of other kinds as well (most importantly, half-closed intervals (before_begin, last] that we call [coranges](#corange)) which is especially useful when working with ranges that are not bidirectional (or common).
+
 ## Members
 ### Concepts
 
