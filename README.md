@@ -1,6 +1,6 @@
 ## The enranged library
 
-A collection of various additions to the C++20 standard `<ranges>` library. Still work in progress.
+A collection of various additions to the C++20 standard `<ranges>` library. Still work in progress. See [documentation](doc/index.md) for the list of features implemented so far.
 
 ### Installation
 
