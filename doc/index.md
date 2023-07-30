@@ -262,6 +262,102 @@ The concept of a range that can be naturally spliced with a subrange of another 
 > [!NOTE]
 > There may be additional constraints imposed on the ranges being spliced, that are not expressible with the language of concepts. For example `std::list<T>::splice()` requires that both the source and destination lists have equal allocators, i.e. `src.get_allocator() == dst.get_allocator()`. Violating requirements like that one may lead to undefined behaviour.
 
+---
+
+### cosplice
+<sub>Defined in header [&lt;enranged/splicing.hpp&gt;](/include/enranged/splicing.hpp)</sub>
+```c++
+template <std::ranges::forward_range D, std::ranges::forward_range S,
+          left_limit_of<D> P, left_limit_of<S> L>
+  requires(spliceable_with_range<D, S>)
+constexpr void cosplice(D&& dst_range, P pos,
+                        S&& src_range, L lt, std::ranges::iterator_t<S> rt);
+```
+Moves the elements in the corange (lt, rt] of the source range after the specified position in the destination range.
+
+The [**cosplice()**](#cosplice) methods are dual to the regular `splice()` ones (in a sense that the latter move a range [a, b) before pos). They are suitable for both singly and doubly linked lists, but unlike the standard `splice_after()` (as in `std::forward_list`) can have O(1) complexity.
+
+**Parameters**
+
+* `pos` must be a valid left limit of `dst_range` (i.e., a front sentinel or a dereferenceable iterator)
+* `lt` must be a valid left limit of `src_range` (i.e., a front sentinel or a dereferenceable iterator)
+* `rt` must be a dereferenceable iterator of `src_range`, such that `(lt, rt]` is a valid corange (in particular, `lt != rt`)
+
+> [!NOTE]
+> The behaviour is undefined if pos is in (lt, rt] or is equal to lt (when dst_range and src_range are the same).
+
+---
+
+<sub>Defined in header [&lt;enranged/splicing.hpp&gt;](/include/enranged/splicing.hpp)</sub>
+```c++
+template <std::ranges::forward_range D, std::ranges::forward_range S,
+          left_limit_of<D> P, left_limit_of<S> I>
+  requires(spliceable_with_range<D, S>)
+constexpr void cosplice(D&& dst_range, P pos, S&& src_range, I it);
+```
+Moves the element immediately following the one pointed to by _it_ in the source range after the specified position in the destination range.
+
+**Parameters**
+
+* `pos` must be a valid left limit of `dst_range` (i.e., a front sentinel or a dereferenceable iterator)
+* `it` must be a valid left limit of `src_range` (i.e., a front sentinel or a dereferenceable iterator), such that [**after(src_range, it)**](#after) is dereferenceable
+
+> [!NOTE]
+> The behaviour is undefined if pos is equal to _it_ or to [**after(src_range, it)**](#after) (when dst_range and src_range are the same).
+
+---
+
+<sub>Defined in header [&lt;enranged/splicing.hpp&gt;](/include/enranged/splicing.hpp)</sub>
+```c++
+template <spliceable_range R, left_limit_of<R> P, left_limit_of<R> L>
+constexpr void cosplice(R&& range, P pos, L lt, std::ranges::iterator_t<R> rt);
+```
+Moves the elements in the corange (lt, rt] after the specified position in the given range.
+
+**Parameters**
+
+* `pos` must be a valid left limit of the given range (i.e., a front sentinel or a dereferenceable iterator)
+* `lt` must be a valid left limit of the given range (i.e., a front sentinel or a dereferenceable iterator)
+* `rt` must be a dereferenceable iterator of the given range, such that `(lt, rt]` is a valid corange (in particular, `lt != rt`)
+
+> [!NOTE]
+> The behaviour is undefined if pos is in (lt, rt] or is equal to lt.
+
+---
+
+<sub>Defined in header [&lt;enranged/splicing.hpp&gt;](/include/enranged/splicing.hpp)</sub>
+```c++
+template <spliceable_range R, left_limit_of<R> P, left_limit_of<R> I>
+constexpr void cosplice(R&& range, P pos, I it);
+```
+Moves the element immediately following the one pointed to by _it_ after the specified position in the given range.
+
+**Parameters**
+
+* `pos` must be a valid left limit of the given range (i.e., a front sentinel or a dereferenceable iterator)
+* `it` must be a valid left limit of the given range (i.e., a front sentinel or a dereferenceable iterator), such that [**after(range, it)**](#after) is dereferenceable
+
+> [!NOTE]
+> The behaviour is undefined if pos is equal to _it_ or to [**after(range, it)**](#after).
+
+---
+
+<sub>Defined in header [&lt;enranged/splicing.hpp&gt;](/include/enranged/splicing.hpp)</sub>
+```c++
+template <std::ranges::forward_range D, forward_corange S, left_limit_of<D> P>
+  requires(spliceable_with_range<D, S>)
+constexpr void cosplice(D&& dst_range, P pos, S&& src_range);
+```
+Moves the elements of the source corange after the specified position in the destination range.
+
+**Parameters**
+
+* `pos` must be a valid left limit of `dst_range` (i.e., a front sentinel or a dereferenceable iterator)
+* `src_range` must be a non-empty [forward corange](#forward_corange)
+
+> [!NOTE]
+> The behaviour is undefined if pos or [**after(dst_range, pos)**](#after) is in src_range.
+
 # Limits
 
 A range is a half-open interval [begin, end) defined by an iterator to its first element and a sentinel. This library allows to define and manipulate intervals of other kinds as well (most importantly, half-closed intervals (before_begin, last] that we call [coranges](#corange)) which is especially useful when working with ranges that are not bidirectional (or common).
