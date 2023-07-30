@@ -397,3 +397,73 @@ A range is a half-open interval [begin, end) defined by an iterator to its first
 | [**after**](#after) | returns an iterator to an element immediately following the given left limit in the given range |
 | [**before_begin**](#before_begin) | returns a front sentinel that precedes the beginning of the given range |
 | [**last**](#last) | returns an iterator to the last element of the given corange |
+
+## Details
+### corange
+<sub>Defined in header [&lt;enranged/limits.hpp&gt;](/include/enranged/limits.hpp)</sub>
+```c++
+template <typename R>
+concept corange = std::ranges::range<R>
+  && (__detail::has_last<R>
+      || (std::ranges::bidirectional_range<R> && std::ranges::common_range<R>)
+      || (std::ranges::random_access_range<R> && std::ranges::sized_range<R>));
+```
+The concept of a range with the known last element.
+
+A regular STL range r is of form [a, b) where a=**begin(r)** is an iterator and b=**end(r)** is a sentinel. In contrast, a corange c is of form (x, y] where x=[**before_begin(c)**](#before_begin) is a front sentinel and y=[**last(c)**](#last) is an iterator. In this sense, coranges are dual to ranges.
+
+A range r is considered a corange if it either:
+* defines method `r.last()` returning an iterator to the last element of r, that satisfies the following semantic requirements:
+  * if r is not empty then `r.last()` must return a dereferenceable iterator;
+  * if r is a **forward_range** and is not empty then `next(last(r)) == end(r)` must be true.
+* or is both **bidirectional_range** and **common_range**;
+* or is both **random_access_range** and **sized_range**.
+
+Unlike with regular ranges, we consider a corange to be valid only if its [**last()**](#last) iterator is dereferenceable. Thus only non-empty coranges can be valid. Functions that accept a corange (either directly with a type constraint, or semantically as a pair (a, b] of a front sentinel + iterator) normally require its validity.
+
+---
+
+### forward_corange
+<sub>Defined in header [&lt;enranged/limits.hpp&gt;](/include/enranged/limits.hpp)</sub>
+```c++
+template <typename R>
+concept forward_corange = corange<R> && std::ranges::forward_range<R>;
+```
+The concept of a corange (i.e., a range with a known last element) that is also a **forward_range**.
+
+> [!NOTE]
+> There is additional semantic requirements implied by the equality preserving properties of forward ranges, namely:
+> * **begin(r)** == **[after](#after)(r, [before_begin(r)](#before_begin))**;
+> * **next([last(r)](#last)**) == **end(r)**.
+>
+> Both have already been described above and are mentioned here for convenience only.
+
+---
+
+### left_limit_of
+<sub>Defined in header [&lt;enranged/limits.hpp&gt;](/include/enranged/limits.hpp)</sub>
+```c++
+template <typename T, typename R>
+concept left_limit_of = std::ranges::range<R>
+  && (std::same_as<std::remove_cvref_t<T>, front_sentinel_t<R>>
+      || std::same_as<std::remove_cvref_t<T>, std::ranges::iterator_t<R>>);
+```
+The concept of a type that can serve as a lower bound for a subrange of the given range (i.e. a dereferenceable iterator or a front sentinel).
+
+> [!NOTE]
+> An additional semantic requirement here implies that a left limit of a range never compares equal to its **end()**.
+
+---
+
+### right_limit_of
+<sub>Defined in header [&lt;enranged/limits.hpp&gt;](/include/enranged/limits.hpp)</sub>
+```c++
+template <typename T, typename R>
+concept right_limit_of = std::ranges::range<R>
+  && (std::same_as<std::remove_cvref_t<T>, std::ranges::sentinel_t<R>>
+      || std::same_as<std::remove_cvref_t<T>, std::ranges::iterator_t<R>>);
+```
+The concept of a type that can serve as an upper bound for a subrange of the given range (i.e. a dereferenceable iterator or a sentinel).
+
+> [!NOTE]
+> An additional semantic requirement here implies that a right limit of a range never compares equal to its [**before_begin()**](#before_begin).
