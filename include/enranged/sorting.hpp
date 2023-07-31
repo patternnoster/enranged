@@ -193,4 +193,67 @@ constexpr ranges::borrowed_iterator_t<R> merge_sort_splice
                            ranges::size(range), comp, proj);
 }
 
+/**
+ * @brief  Performs a splice-based version of the stable bucket sorting
+ *         algorithm on the open interval (left, right) in the given
+ *         range, using a strict weak order and an equivalence
+ *         relation that is consistent with it.
+ *
+ * A predicate (denoted by x~y) is an equivalence relation if (x~x),
+ * (x~y => y~x) and (x~y & y~z => x~z) for all x, y and z.
+ *
+ * We say that an equivalence relation is consistent with a strict
+ * weak order (denoted by x<y with its negation !(x<y) denoted by
+ * x>=y) iff for all x, y, a, b:
+ * - if (x>=y and y>=x) then x~y
+ * - if (x<y & x~a & y~b) then (a<b or a~b)
+ *
+ * Equivalently, the relation x<'y <=> x<y & !(x~y) induces a (strict)
+ * total order on equivalency classes.
+ *
+ * Put simply, consistency means that any pair of elements from two
+ * different equivalence classes (i.e. buckets) compare the same. An
+ * example of such a relation on positive integers, consistent with
+ * the natural order (<), is: x~y <=> (x>>k) == (y>>k) for some k.
+ *
+ * To get the best performance, one should choose a relation that
+ * gives not-too-many buckets rougly equal in size. As corner cases,
+ * if none of the elements are equivalent, the algorithm degrades to
+ * insertion_sort; if all elements are equivalent, it degrades to
+ * merge_sort with an extra traversal of the entire range
+ *
+ * @tparam _max_buckets is the maximum number of equivalence classes
+ *         used for the given interval
+ * @tparam EqRel must be an equivalence relation consistent with Comp
+ *         (see above)
+ * @tparam Comp must be a strict weak order (see above)
+ * @param  left must be a valid left limit of the given range (i.e., a
+ *         front sentinel or a dereferenceable iterator)
+ * @param  right must be a valid right limit of the given range (i.e.,
+ *         a sentinel equal to end(range) or a dereferenceable
+ *         iterator)
+ * @return The size of the sorted interval and an iterator to its last
+ *         element after sorting (or after(range, left) if the
+ *         interval is empty)
+ * @note   If the real number of buckets is bigger than _max_buckets,
+ *         the algorithm will still work correctly but a little less
+ *         efficiently, as it will require an additional inplace_merge
+ **/
+template <size_t _max_buckets = 32,
+          spliceable_range R, left_limit_of<R> L1, right_limit_of<R> L2,
+          typename EqRel, typename Proj1 = std::identity,
+          typename Comp = ranges::less, typename Proj2 = std::identity>
+  requires(splice_sortable_range<R, Comp, Proj2>
+           && std::indirect_equivalence_relation
+              <EqRel, std::projected<ranges::iterator_t<R>, Proj1>>)
+constexpr std::pair<size_t, ranges::borrowed_iterator_t<R>> bucket_sort_splice
+  (R&& range, const L1 left, const L2 right,
+   const EqRel rel, const Proj1 proj1 = {},
+   const Comp comp = {}, const Proj2 proj2 = {}) {
+  return __detail::bucket_sort_splice<_max_buckets>
+    (std::forward<R>(range), left, right,
+     __detail::project_predicate(rel, proj1),
+     __detail::project_predicate(comp, proj2));
+}
+
 } // namespace enranged

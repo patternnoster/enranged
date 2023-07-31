@@ -188,4 +188,12 @@ constexpr ranges::borrowed_iterator_t<R> merge_sort_splice
   return last_sorted;
 }
 
+template <size_t _max_buckets,
+          spliceable_range R, left_limit_of<R> L1, right_limit_of<R> L2,
+          typename EqRel, typename Comp>
+constexpr std::pair<size_t, ranges::borrowed_iterator_t<R>> bucket_sort_splice
+  (R&& range, const L1 left, const L2 end, const EqRel is_eq, const Comp comp) {
+  return { 0, after(range, left) };
+}
+
 } // namespace enranged::__detail
