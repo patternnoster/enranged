@@ -467,3 +467,76 @@ The concept of a type that can serve as an upper bound for a subrange of the giv
 
 > [!NOTE]
 > An additional semantic requirement here implies that a right limit of a range never compares equal to its [**before_begin()**](#before_begin).
+
+---
+
+### front_sentinel_t
+<sub>Defined in header [&lt;enranged/limits.hpp&gt;](/include/enranged/limits.hpp)</sub>
+```c++
+template <std::ranges::range R>
+using front_sentinel_t = decltype(before_begin(std::declval<R&>()));
+```
+The sentinel type that preceeds the beginning of the given range (see [**before_begin()**](#before_begin) for details).
+
+> [!NOTE]
+> This type is always `std::sentinel_for<std::ranges::iterator_t<R>>`.
+
+---
+
+### default_front_sentinel_t
+<sub>Defined in header [&lt;enranged/limits.hpp&gt;](/include/enranged/limits.hpp)</sub>
+```c++
+struct default_front_sentinel_t: std::unreachable_sentinel_t {};
+```
+The default implementation of the front sentinel for ranges that do not define a [**before_begin()**](#before_begin) method.
+
+---
+
+### default_front_sentinel
+<sub>Defined in header [&lt;enranged/limits.hpp&gt;](/include/enranged/limits.hpp)</sub>
+```c++
+inline constexpr default_front_sentinel_t default_front_sentinel{};
+```
+A (global constant) object of type [**default_front_sentinel_t**](#default_front_sentinel_t) that may serve as a universal (unreachable) front sentinel.
+
+---
+
+### after
+<sub>Defined in header [&lt;enranged/limits.hpp&gt;](/include/enranged/limits.hpp)</sub>
+```c++
+template <std::ranges::range R, left_limit_of<R> L>
+constexpr std::ranges::iterator_t<R> after(R&& range, L it);
+```
+Returns an iterator to an element immediately following the given left limit in the given range.
+
+---
+
+### before_begin
+<sub>Defined in header [&lt;enranged/limits.hpp&gt;](/include/enranged/limits.hpp)</sub>
+```c++
+template <std::ranges::range R>
+constexpr std::sentinel_for<std::ranges::iterator_t<R>> auto before_begin(R&& range) noexcept;
+```
+Returns a front sentinel that precedes the beginning of the given range.
+
+This extends the idea of a "reverse end" to ranges that cannot be naturally reversed (e.g., ranges that are not bidirectional or have an unreachable **end()** sentinel), but can still somehow use the concept of a pseudo-iterator pointing before the beggining (e.g., as in `std::forward_list<T>::insert_after()`).
+
+If the range implements a noexcept method `before_begin()` that returns an `std::sentinel_for` its iterator, then the result of that method will be used. Otherwise, [**default_front_sentinel**](#default_front_sentinel) is returned.
+
+A front sentinel s of a range r has the following semantic requirements (that should be kept in mind when implementing `r.before_begin()`):
+* s cannot compare equal to any dereferenceable iterator of r or to an iterator that equals the **end(r)**. In particular, in case of a **common_range**, `s == end(r)` must always return false;
+* if s has the type of an iterator of r, then its increment must be either dereferenceable or equal to **end(r)**. Furthermore, if r is a **forward_range**, then `++s == begin(r)` must be true;
+* s should not be dereferenced and, if r is not **common_range**, does not have to be equality comparable with **end(r)**.
+
+---
+
+### last
+<sub>Defined in header [&lt;enranged/limits.hpp&gt;](/include/enranged/limits.hpp)</sub>
+```c++
+template <corange R>
+constexpr std::ranges::iterator_t<R> last(R&& range);
+```
+Returns an iterator to the last element of the given corange.
+
+> [!NOTE]
+> The behaviour is undefined if the range is empty (see above about the validity of coranges).
