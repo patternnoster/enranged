@@ -22,10 +22,11 @@ struct test_type {
 
 template <typename T>
 class SortingTests: public ::testing::Test {
-protected:
+public:
   constexpr static bool is_stability_test =
     std::same_as<typename T::value_type, test_type>;
 
+protected:
   void build_test_vec(const size_t size) {
     test_vec = decltype(test_vec)(size);
 
@@ -208,6 +209,78 @@ TYPED_TEST(SortingTests, merge_sort_splice) {
     }
 
     this->test_sorted(result, this->test_vec.begin() + skip_left,
+                      this->test_vec.end() - skip_right);
+  }
+}
+
+template <size_t _shift>
+bool equal_shifts(const int x, const int y) noexcept {
+  return x >> _shift == y >> _shift;
+}
+
+template <typename T, size_t _max_buckets = 1, size_t _shift = 0>
+auto call_bs(T& range, const size_t skip_left,
+             const size_t size, const size_t skip_right) {
+  const auto invoker = [&range](const auto left, const auto right) {
+    if constexpr (SortingTests<T>::is_stability_test)
+      return bucket_sort_splice<_max_buckets>
+        (range, left, right, equal_shifts<_shift>, &test_type::value,
+         std::greater{}, &test_type::value);
+    else
+      return bucket_sort_splice<_max_buckets>(range, left, right,
+                                              equal_shifts<_shift>);
+  };
+
+  if (skip_left == 0) {
+    if (skip_right == 0)
+      return invoker(before_begin(range), ranges::end(range));
+    else
+      return invoker(before_begin(range),
+                     ranges::next(ranges::begin(range), skip_left + size));
+  }
+  else {
+    const auto llim = ranges::next(ranges::begin(range), skip_left - 1);
+    if (skip_right == 0)
+      return invoker(llim, ranges::end(range));
+    else
+      return invoker(llim,
+                     ranges::next(ranges::begin(range), skip_left + size));
+  }
+};
+
+TYPED_TEST(SortingTests, bucket_sort_splice) {
+  constexpr size_t Runs = 500;
+  constexpr size_t MaxElts = 1000;
+
+  std::vector<decltype(&call_bs<TypeParam>)> sorters;
+  if constexpr (SortingTests<TypeParam>::is_stability_test)
+    sorters = {
+      &call_bs<TypeParam, 4, 1>, // exact match
+      &call_bs<TypeParam, 2, 1>, // less buckets
+      &call_bs<TypeParam, 8, 1>, // too many buckets
+      &call_bs<TypeParam, 3, 3>, // all equiv
+      &call_bs<TypeParam, 8, 0>  // all not equiv
+    };
+  else
+    sorters =  {
+      &call_bs<TypeParam, 32, 26>, // exact match
+      &call_bs<TypeParam, 20, 25>, // less buckets
+      &call_bs<TypeParam, 64, 27>, // too many buckets
+      &call_bs<TypeParam, 16, 31>, // all equiv
+      &call_bs<TypeParam, 8, 0>    // all not equiv
+    };
+
+  for (size_t i = 0; i < Runs; ++i) {
+    auto [skip_left, skip_right] =
+      this->build_all_for_sorting(i == 0 ? 1 : MaxElts);
+
+    const auto size = this->test_vec.size() - skip_left - skip_right;
+    const auto [out_size, last] =
+      sorters[rand() % sorters.size()](this->range,
+                                       skip_left, size, skip_right);
+
+    EXPECT_EQ(out_size, size);
+    this->test_sorted(last, this->test_vec.begin() + skip_left,
                       this->test_vec.end() - skip_right);
   }
 }
