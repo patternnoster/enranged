@@ -7,6 +7,7 @@
 #include <utility>
 #include <vector>
 
+#include "enranged/__detail/flat_list.hpp"
 #include "enranged/sorting.hpp"
 
 #include "linked_list.hpp"
@@ -210,6 +211,41 @@ TYPED_TEST(SortingTests, merge_sort_splice) {
 
     this->test_sorted(result, this->test_vec.begin() + skip_left,
                       this->test_vec.end() - skip_right);
+  }
+}
+
+TEST(FlatListTests, base) {
+  // Test an internal structure used in sorting
+  constexpr size_t MaxElts = 100;
+
+  __detail::flat_list<size_t, MaxElts> list;
+  std::forward_list<size_t> test_list;
+
+  static_assert(ranges::forward_range<decltype(list)>);
+  ASSERT_EQ(sizeof(decltype(list)::pos_t), 1);
+
+  for (size_t i = 0; i < MaxElts; ++i) {
+    EXPECT_EQ(list.size(), i);
+
+    const auto des = rand() % 3;
+    const auto pos = des == 0 ? 0 : (des == 1 ? i : (rand() % (i + 1)));
+    const auto it =
+      list.emplace_after(ranges::next(list.before_begin(), pos), i);
+
+    EXPECT_EQ(*it, i);
+    EXPECT_EQ(ranges::next(list.before_begin()), list.begin());
+    EXPECT_EQ(ranges::next(list.begin(), list.size()), list.end());
+
+    test_list.emplace_after(ranges::next(test_list.before_begin(), pos), i);
+
+    size_t ctr = 0;
+    auto test_it = test_list.begin();
+    for (auto x : list) {
+      ++ctr;
+      ASSERT_EQ(x, *test_it++);
+    }
+
+    EXPECT_EQ(ctr, (i + 1));
   }
 }
 
