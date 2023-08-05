@@ -8,6 +8,8 @@
 
 #include "../splicing.hpp"
 
+#include "flat_list.hpp"
+
 /**
  * @file
  * Implementation of sorting algorithms for certain kinds of ranges
@@ -193,6 +195,117 @@ template <size_t _max_buckets,
           typename EqRel, typename Comp>
 constexpr std::pair<size_t, ranges::borrowed_iterator_t<R>> bucket_sort_splice
   (R&& range, const L1 left, const L2 end, const EqRel is_eq, const Comp comp) {
+  static_assert(_max_buckets > 0);
+  using flat_list_t =
+    flat_list<std::pair<size_t, ranges::iterator_t<R>>, _max_buckets>;
+
+  auto lhs = after(range, left);  // Rightmost bucketed
+  if (lhs == end) return std::make_pair(0, lhs);
+  // Okay, that was nasty, but now we know the range has something
+
+  flat_list_t memory;
+
+  /* First, traverse the range to fill the buckets up. Our flat_list
+   * contains the size of the bucket and an iterator to its last
+   * element.
+   * Invariant: if a bucket with b precedes the one with c in the
+   * range then c >= b */
+
+  // The first element always has its own bucket
+  auto last_buck = memory.emplace_after(memory.before_begin(), 1, lhs);
+
+  // If the range has more equivalency classes than _max_buckets, we
+  // will put them in the last bucket and inplace_merge later
+  bool last_buck_dirty = false;
+
+  for (auto it = ranges::next(lhs); it != end;) {
+     // We deal with the last bucket separately
+    if (is_eq(*it, *last_buck->second)) {
+      // No need for splicing, just fast forward
+      ++last_buck->first;
+      last_buck->second = it;
+      lhs = it++;
+      continue;
+    }
+
+    const bool can_add_buckets = memory.size() < _max_buckets;
+
+    /* Okay, the element is not in the last bucket, but we might still
+     * get away with no splicing: if the element is greater than the
+     * representative, it cannot be in any bucket preceding this one
+     * because of the invariant and the consistency. Therefore we will
+     * need to start another bucket right here */
+    if (comp(*last_buck->second, *it)) {
+      if (can_add_buckets)
+        last_buck = memory.emplace_after(last_buck, 1, it);
+      else {
+        // Put the unbucketed in the last bucket still (note that the
+        // last bucket cannot change after the maximum is reached)
+        ++last_buck->first;
+        last_buck_dirty = true;
+      }
+
+      lhs = it++;
+      continue;
+    }
+
+    // Fine, we need to check other buckets and splice. First decide
+    // how many elements go, so we can optimize the splicing a little
+    size_t size_to_bucket = 1;
+    auto it_last = it;
+    auto it_next = ranges::next(it);
+    for (; it_next != end && is_eq(*it, *it_next); it_last = it_next++)
+      ++size_to_bucket;
+
+    // Now iterate the buckets to either find the proper one or the
+    // position to put a new bucket after
+    bool need_new_bucket = true;
+    auto buck_it = memory.before_begin();
+    for (auto buck_it_next = memory.begin(); buck_it_next != last_buck;
+         buck_it = buck_it_next++) {
+      if (is_eq(*it, *buck_it_next->second)) {
+        // Found the proper bucket
+        need_new_bucket = false;
+        buck_it = buck_it_next;
+        break;
+      }
+
+      /* Wrong bucket, same logic: if *it is less than the
+       * representative, new bucket goes before this one.
+       * Note that since the representative of the last bucket is >=
+       * *it, this will always be true for the last bucket in case of
+       * consistency requirement */
+      if (comp(*it, *buck_it_next->second))
+        break;
+    }
+
+    it = it_next;
+
+    if (need_new_bucket) {
+      if (!can_add_buckets) {
+        // There is too many buckets already: keep the unbucketed
+        // elements in the last bucket for now
+        last_buck->first+= size_to_bucket;
+        last_buck_dirty = true;
+
+        lhs = it_last;
+        continue;
+      }
+
+      if (buck_it == memory.before_begin()) {
+        // Less or equal to all the buckets
+        memory.emplace_after(buck_it, size_to_bucket, it_last);
+        cosplice(range, left, lhs, it_last);
+        continue;
+      }
+      buck_it = memory.emplace_after(buck_it, 0, buck_it->second);
+    }
+
+    cosplice(range, buck_it->second, lhs, it_last);
+    buck_it->first+= size_to_bucket;
+    buck_it->second = it_last;
+  }
+
   return { 0, after(range, left) };
 }
 

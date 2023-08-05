@@ -243,7 +243,7 @@ template <size_t _max_buckets = 32,
           spliceable_range R, left_limit_of<R> L1, right_limit_of<R> L2,
           typename EqRel, typename Proj1 = std::identity,
           typename Comp = ranges::less, typename Proj2 = std::identity>
-  requires(splice_sortable_range<R, Comp, Proj2>
+  requires(_max_buckets > 0 && splice_sortable_range<R, Comp, Proj2>
            && std::indirect_equivalence_relation
               <EqRel, std::projected<ranges::iterator_t<R>, Proj1>>)
 constexpr std::pair<size_t, ranges::borrowed_iterator_t<R>> bucket_sort_splice
