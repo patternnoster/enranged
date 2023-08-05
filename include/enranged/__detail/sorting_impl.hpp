@@ -306,7 +306,32 @@ constexpr std::pair<size_t, ranges::borrowed_iterator_t<R>> bucket_sort_splice
     buck_it->second = it_last;
   }
 
-  return { 0, after(range, left) };
+  /* Phew, that was rough! Now we have these wonderful buckets
+   * perfectly ordered, so we can apply our merge sort to each of
+   * them. After that the range will be sorted */
+  auto buck_it = memory.begin();
+
+  size_t size = buck_it->first;
+  auto last = __detail::merge_sort_splice(range, left, buck_it->first, comp);
+
+  if (buck_it != last_buck) [[likely]] {
+    // More buckets to come
+    ranges::iterator_t<R> prev_last;
+    do {
+      ++buck_it;
+      size+= buck_it->first;
+
+      prev_last = last;  // Remember in case the last bucket is dirty
+      last = __detail::merge_sort_splice(range, last, buck_it->first, comp);
+    }
+    while (buck_it != last_buck);
+
+    if (last_buck_dirty)
+      last =
+        __detail::coinplace_merge_splice(range, left, prev_last, last, comp);
+  }
+
+  return std::make_pair(size, last);
 }
 
 } // namespace enranged::__detail
