@@ -246,6 +246,12 @@ constexpr ranges::borrowed_iterator_t<R> merge_sort_splice
  * @note   If the real number of buckets is bigger than _max_buckets,
  *         the algorithm will still work correctly but a little less
  *         efficiently, as it will require an additional inplace_merge
+ * @note   The algorithm uses additional (_max_buckets *
+ *         (sizeof(pair<size_t, iterator_t<R>>) + sizeof(T))) bytes of
+ *         memory on the stack, where T is the minimal unsigned type
+ *         capable of holding _max_buckets (e.g., uint8_t if it is <=
+ *         255). If that is too much stack memory, consider using the
+ *         version that takes an allocator
  **/
 template <size_t _max_buckets = 32,
           spliceable_range R, left_limit_of<R> L1, right_limit_of<R> L2,
@@ -263,5 +269,42 @@ constexpr std::pair<size_t, ranges::borrowed_iterator_t<R>> bucket_sort_splice
      __detail::project_predicate(rel, proj1),
      __detail::project_predicate(comp, proj2));
 }
+
+/**
+ * @brief  Performs a splice-based version of the bucket sorting
+ *         algorithm on the open interval (left, right) in the given
+ *         range, using a strict weak order, an equivalence relation
+ *         that is weakly consistent with it (see above for details)
+ *         and a custom allocator for additional memory. If the
+ *         relation is (totally) consistent with the order, then the
+ *         sorting is stable
+ * @tparam _max_buckets is the maximum number of equivalence classes
+ *         used for the given interval
+ * @tparam EqRel must be an equivalence relation weakly consistent
+ *         with Comp (see above)
+ * @tparam Comp must be a strict weak order (see above)
+ * @param  left must be a valid left limit of the given range (i.e., a
+ *         front sentinel or a dereferenceable iterator)
+ * @param  right must be a valid right limit of the given range (i.e.,
+ *         a sentinel equal to end(range) or a dereferenceable
+ *         iterator)
+ * @return The size of the sorted interval and an iterator to its last
+ *         element after sorting (or after(range, left) if the
+ *         interval is empty)
+ * @note   If the real number of buckets is bigger than _max_buckets,
+ *         the algorithm will still work correctly but a little less
+ *         efficiently, as it will require an additional inplace_merge
+ **/
+template <size_t _max_buckets = 32, typename Allocator,
+          spliceable_range R, left_limit_of<R> L1, right_limit_of<R> L2,
+          typename EqRel, typename Proj1 = std::identity,
+          typename Comp = ranges::less, typename Proj2 = std::identity>
+  requires(_max_buckets > 0 && splice_sortable_range<R, Comp, Proj2>
+           && std::indirect_equivalence_relation
+              <EqRel, std::projected<ranges::iterator_t<R>, Proj1>>)
+constexpr std::pair<size_t, ranges::borrowed_iterator_t<R>> bucket_sort_splice
+  (Allocator&& alloc, R&& range, const L1 left, const L2 right,
+   const EqRel rel, const Proj1 proj1 = {},
+   const Comp comp = {}, const Proj2 proj2 = {});
 
 } // namespace enranged
