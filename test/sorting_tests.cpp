@@ -354,3 +354,32 @@ TEST_F(SortingListTests, alt_interfaces) {
   ASSERT_EQ(is_result, ranges::end(this->range));
   ASSERT_EQ(ms_result, ranges::end(this->range));
 }
+
+TEST_F(SortingListTests, weakly_consistent_bucket_sort) {
+  constexpr size_t Runs = 100;
+  constexpr size_t MaxElts = 10000;
+
+  // Test bucket sort with a weakly consistent but not (totally)
+  // consistent with the order equality relation
+  const auto comp = [](const int lhs, const int rhs) {
+    return (lhs >> 27) < (rhs >> 27);
+  };
+
+  for (size_t i = 0; i < Runs; ++i) {
+    this->build_test_vec(MaxElts);
+    this->build_range();
+
+    const auto [out_size, last] =
+      bucket_sort_splice<32>(this->range, before_begin(this->range),
+                             ranges::end(this->range),
+                             equal_shifts<26>, {}, comp);
+
+    EXPECT_EQ(out_size, this->test_vec.size());
+    auto it = ranges::begin(this->range);
+    for (size_t j = 1; j < out_size; ++j) {
+      const auto next = ranges::next(it);
+      ASSERT_LE((*it >> 27), (*next >> 27));
+      it = next;
+    }
+  }
+}
