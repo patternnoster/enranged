@@ -257,8 +257,11 @@ constexpr std::pair<size_t, ranges::borrowed_iterator_t<R>> bucket_sort_splice
     for (; it_next != end && is_eq(*it, *it_next); it_last = it_next++)
       ++size_to_bucket;
 
-    // Now iterate the buckets to either find the proper one or the
-    // position to put a new bucket after
+    /* Now iterate the buckets to either find the proper one or the
+     * position to put a new bucket after. Note that if the relation
+     * is totally consistent with the order, then we get here only if
+     * the current element is strictly less than the representative,
+     * so there is no additional work in that case */
     bool need_new_bucket = true;
     auto buck_it = memory.before_begin();
     for (auto buck_it_next = memory.begin(); buck_it_next != last_buck;
@@ -274,7 +277,10 @@ constexpr std::pair<size_t, ranges::borrowed_iterator_t<R>> bucket_sort_splice
        * representative, new bucket goes before this one.
        * Note that since the representative of the last bucket is >=
        * *it, this will always be true for the last bucket in case of
-       * consistency requirement */
+       * total consistency. Otherwise, and if it isn't, then those
+       * representatives are equivalent (relative to the ordering),
+       * and it doesn't matter whether we put this bucket before or
+       * after the last one: no stability is guaranteed anyway */
       if (comp(*it, *buck_it_next->second))
         break;
     }

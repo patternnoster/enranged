@@ -194,27 +194,35 @@ constexpr ranges::borrowed_iterator_t<R> merge_sort_splice
 }
 
 /**
- * @brief  Performs a splice-based version of the stable bucket sorting
+ * @brief  Performs a splice-based version of the bucket sorting
  *         algorithm on the open interval (left, right) in the given
  *         range, using a strict weak order and an equivalence
- *         relation that is consistent with it.
+ *         relation that is weakly consistent with it. If the relation
+ *         is (totally) consistent with the order, then the sorting is
+ *         stable.
  *
  * A predicate (denoted by x~y) is an equivalence relation if (x~x),
  * (x~y => y~x) and (x~y & y~z => x~z) for all x, y and z.
  *
- * We say that an equivalence relation is consistent with a strict
- * weak order (denoted by x<y with its negation !(x<y) denoted by
- * x>=y) iff for all x, y, a, b:
- * - if (x>=y and y>=x) then x~y
- * - if (x<y & x~a & y~b) then (a<b or a~b)
+ * We say that an equivalence relation is weakly consistent with a
+ * strict weak order (denoted by x<y with its negation !(x<y) denoted
+ * by x>=y) iff (x<y & x~a & y~b) implies (a<b or a~b) for all x, y,
+ * a, b. Or, equivalently, the relation x<'y <=> x<y & !(x~y) is a
+ * strict weak order.
  *
- * Equivalently, the relation x<'y <=> x<y & !(x~y) induces a (strict)
- * total order on equivalency classes.
+ * Put simply, weak consistency means that any pair of elements from
+ * two different equivalence classes (i.e. buckets) compare the
+ * same. An example of such a relation on positive integers, weakly
+ * consistent with the natural order (<), is: x~y <=> (x>>k) == (y>>k)
+ * for some k.
  *
- * Put simply, consistency means that any pair of elements from two
- * different equivalence classes (i.e. buckets) compare the same. An
- * example of such a relation on positive integers, consistent with
- * the natural order (<), is: x~y <=> (x>>k) == (y>>k) for some k.
+ * An equivalence relation is (totally) consistent with a strict weak
+ * order iff it is weakly consistent with it and additionally (x>=y &
+ * y>=x) implies x~y. Equivalently, x<'y induces a (strict) total
+ * order on equivalency classes.
+ *
+ * In the bit shift example above the relation is also (totally)
+ * consistent with the natural order.
  *
  * To get the best performance, one should choose a relation that
  * gives not-too-many buckets rougly equal in size. As corner cases,
@@ -224,8 +232,8 @@ constexpr ranges::borrowed_iterator_t<R> merge_sort_splice
  *
  * @tparam _max_buckets is the maximum number of equivalence classes
  *         used for the given interval
- * @tparam EqRel must be an equivalence relation consistent with Comp
- *         (see above)
+ * @tparam EqRel must be an equivalence relation weakly consistent
+ *         with Comp (see above)
  * @tparam Comp must be a strict weak order (see above)
  * @param  left must be a valid left limit of the given range (i.e., a
  *         front sentinel or a dereferenceable iterator)
