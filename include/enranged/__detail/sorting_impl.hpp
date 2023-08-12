@@ -3,6 +3,7 @@
 #include <cstdint>
 #include <functional>
 #include <iterator>
+#include <memory>
 #include <type_traits>
 #include <utility>
 
@@ -190,20 +191,43 @@ constexpr ranges::borrowed_iterator_t<R> merge_sort_splice
   return last_sorted;
 }
 
+template <size_t _max_buckets, typename R>
+using bucket_sort_splice_data =
+  flat_list<std::pair<size_t, ranges::iterator_t<R>>, _max_buckets>;
+
+template <size_t _max_buckets, typename R, typename Allocator>
+constexpr auto allocate_bucket_sort_splice_data(Allocator&& alloc) {
+  // We need a proper smart pointer here in case exception is thrown
+  // from the main sorting function
+  using data_t = bucket_sort_splice_data<_max_buckets, R>;
+  using traits = std::allocator_traits<std::remove_reference_t<Allocator>>
+    ::template rebind_traits<data_t>;
+
+  typename traits::allocator_type real_alloc{std::forward<Allocator>(alloc)};
+
+  auto data_ptr = real_alloc.allocate(1);
+  traits::construct(real_alloc, data_ptr);
+
+  auto deleter =
+    [real_alloc = std::move(real_alloc)](data_t* const ptr) mutable {
+      traits::destroy(real_alloc, ptr);
+      real_alloc.deallocate(ptr, 1);
+    };
+
+  return
+    std::unique_ptr<data_t, decltype(deleter)>(data_ptr, std::move(deleter));
+}
+
 template <size_t _max_buckets,
           spliceable_range R, left_limit_of<R> L1, right_limit_of<R> L2,
           typename EqRel, typename Comp>
 constexpr std::pair<size_t, ranges::borrowed_iterator_t<R>> bucket_sort_splice
-  (R&& range, const L1 left, const L2 end, const EqRel is_eq, const Comp comp) {
+  (R&& range, const L1 left, const L2 end, const EqRel is_eq, const Comp comp,
+   bucket_sort_splice_data<_max_buckets, R>& memory) {
   static_assert(_max_buckets > 0);
-  using flat_list_t =
-    flat_list<std::pair<size_t, ranges::iterator_t<R>>, _max_buckets>;
-
   auto lhs = after(range, left);  // Rightmost bucketed
   if (lhs == end) return std::make_pair(0, lhs);
   // Okay, that was nasty, but now we know the range has something
-
-  flat_list_t memory;
 
   /* First, traverse the range to fill the buckets up. Our flat_list
    * contains the size of the bucket and an iterator to its last

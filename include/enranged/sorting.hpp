@@ -264,10 +264,11 @@ constexpr std::pair<size_t, ranges::borrowed_iterator_t<R>> bucket_sort_splice
   (R&& range, const L1 left, const L2 right,
    const EqRel rel, const Proj1 proj1 = {},
    const Comp comp = {}, const Proj2 proj2 = {}) {
-  return __detail::bucket_sort_splice<_max_buckets>
-    (std::forward<R>(range), left, right,
-     __detail::project_predicate(rel, proj1),
-     __detail::project_predicate(comp, proj2));
+  __detail::bucket_sort_splice_data<_max_buckets, R> data;
+  return __detail::bucket_sort_splice(std::forward<R>(range), left, right,
+                                      __detail::project_predicate(rel, proj1),
+                                      __detail::project_predicate(comp, proj2),
+                                      data);
 }
 
 /**
@@ -305,6 +306,14 @@ template <size_t _max_buckets = 32, typename Allocator,
 constexpr std::pair<size_t, ranges::borrowed_iterator_t<R>> bucket_sort_splice
   (Allocator&& alloc, R&& range, const L1 left, const L2 right,
    const EqRel rel, const Proj1 proj1 = {},
-   const Comp comp = {}, const Proj2 proj2 = {});
+   const Comp comp = {}, const Proj2 proj2 = {}) {
+  auto data_ptr = __detail::allocate_bucket_sort_splice_data<_max_buckets, R>
+    (std::forward<Allocator>(alloc));
+  return
+    __detail::bucket_sort_splice(std::forward<R>(range), left, right,
+                                 __detail::project_predicate(rel, proj1),
+                                 __detail::project_predicate(comp, proj2),
+                                 *data_ptr);
+}
 
 } // namespace enranged
