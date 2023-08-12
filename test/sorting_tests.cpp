@@ -1,8 +1,10 @@
 #include <algorithm>
+#include <cstdint>
 #include <forward_list>
 #include <gtest/gtest.h>
 #include <limits>
 #include <list>
+#include <memory>
 #include <random>
 #include <utility>
 #include <vector>
@@ -382,4 +384,71 @@ TEST_F(SortingListTests, weakly_consistent_bucket_sort) {
       it = next;
     }
   }
+}
+
+struct alloc_stats {
+  size_t allocated = 0;
+  size_t freed = 0;
+};
+
+template <typename T>
+class counting_allocator {
+public:
+  using value_type = T;
+
+  counting_allocator(alloc_stats& stats): stats_(stats) {}
+
+  template <typename U>
+  counting_allocator(counting_allocator<U>& rhs):
+    stats_(rhs.stats_) {}
+
+  T* allocate(const size_t size) {
+    stats_.allocated+= sizeof(T) * size;
+    return std::allocator<T>{}.allocate(size);
+  }
+
+  void deallocate(T* const ptr, const size_t size) {
+    stats_.freed+= sizeof(T) * size;
+    std::allocator<T>{}.deallocate(ptr, size);
+  }
+
+private:
+  alloc_stats& stats_;
+  template <typename U> friend class counting_allocator;
+};
+
+TEST_F(SortingListTests, bucket_sort_memory) {
+  constexpr static size_t data_elt_size =
+    sizeof(size_t) + sizeof(ranges::iterator_t<std::list<int>>);
+
+  alloc_stats stats;
+  const auto test_stats =
+    [&stats](const size_t bucket_size, const size_t num_size) {
+      EXPECT_GE(stats.allocated, bucket_size*(data_elt_size + num_size));
+      EXPECT_LT(stats.allocated, (bucket_size + 1)*(data_elt_size + num_size));
+      EXPECT_EQ(stats.freed, stats.allocated);
+    };
+
+  this->build_all_for_sorting(1000);
+
+  counting_allocator<int> alloc(stats);
+
+  bucket_sort_splice<32>(alloc, this->range, before_begin(this->range),
+                         ranges::end(this->range), equal_shifts<26>);
+  test_stats(32, 1);
+
+  stats = alloc_stats{};
+  counting_allocator<double> alloc2(stats);
+  bucket_sort_splice<512>(alloc2, this->range, before_begin(this->range),
+                          ranges::end(this->range), equal_shifts<11>);
+  test_stats(512, 2);
+
+  stats = alloc_stats{};
+  try {
+    bucket_sort_splice<65536>(alloc, this->range, before_begin(this->range),
+                              ranges::end(this->range),
+                              [](int, int) -> bool { throw 42; });
+  }
+  catch (int) {}
+  test_stats(65536, 4);
 }
