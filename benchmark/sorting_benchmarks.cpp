@@ -80,6 +80,10 @@ private:
   std::unique_ptr<T> range_;
 };
 
+bool eq_rel(const int x, const int y) noexcept {
+  return x >> 26 == y >> 26;
+}
+
 BENCHMARK_TEMPLATE_DEFINE_F(SortingBenchmarks, merge_sort_list,
                             std::list<int, shuffled_allocator<int>>)
   (benchmark::State& state) {
@@ -88,6 +92,17 @@ BENCHMARK_TEMPLATE_DEFINE_F(SortingBenchmarks, merge_sort_list,
     enranged::merge_sort_splice(range,
                                 enranged::before_begin(range),
                                 ranges::size(range));
+  }
+}
+
+BENCHMARK_TEMPLATE_DEFINE_F(SortingBenchmarks, bucket_sort_list,
+                            std::list<int, shuffled_allocator<int>>)
+  (benchmark::State& state) {
+  for (auto _ : state) {
+    auto& range = this->rebuild_list(state);
+    enranged::bucket_sort_splice(range,
+                                 enranged::before_begin(range),
+                                 ranges::end(range), eq_rel);
   }
 }
 
@@ -111,6 +126,17 @@ BENCHMARK_TEMPLATE_DEFINE_F(SortingBenchmarks, merge_sort_forward_list,
   }
 }
 
+BENCHMARK_TEMPLATE_DEFINE_F(SortingBenchmarks, bucket_sort_forward_list,
+                            std::forward_list<int, shuffled_allocator<int>>)
+  (benchmark::State& state) {
+  for (auto _ : state) {
+    auto& range = this->rebuild_list(state);
+    enranged::bucket_sort_splice(range,
+                                 enranged::before_begin(range),
+                                 ranges::end(range), eq_rel);
+  }
+}
+
 BENCHMARK_TEMPLATE_DEFINE_F(SortingBenchmarks, std_sort_forward_list,
                             std::forward_list<int, shuffled_allocator<int>>)
   (benchmark::State& state) {
@@ -131,7 +157,22 @@ BENCHMARK_TEMPLATE_DEFINE_F(SortingBenchmarks, merge_sort_linked_list,
   }
 }
 
+BENCHMARK_TEMPLATE_DEFINE_F(SortingBenchmarks, bucket_sort_linked_list,
+                            linked_list<int, shuffled_allocator<int>>)
+  (benchmark::State& state) {
+  for (auto _ : state) {
+    auto& range = this->rebuild_list(state);
+    enranged::bucket_sort_splice<32>(range,
+                                     enranged::before_begin(range),
+                                     ranges::end(range), eq_rel);
+  }
+}
+
 BENCHMARK_REGISTER_F(SortingBenchmarks, merge_sort_list)
+  ->RangeMultiplier(Multiplier)->Range(MinSize, MaxSize)
+  ->Unit(benchmark::kMicrosecond);
+
+BENCHMARK_REGISTER_F(SortingBenchmarks, bucket_sort_list)
   ->RangeMultiplier(Multiplier)->Range(MinSize, MaxSize)
   ->Unit(benchmark::kMicrosecond);
 
@@ -139,8 +180,11 @@ BENCHMARK_REGISTER_F(SortingBenchmarks, std_sort_list)
   ->RangeMultiplier(Multiplier)->Range(MinSize, MaxSize)
   ->Unit(benchmark::kMicrosecond);
 
-
 BENCHMARK_REGISTER_F(SortingBenchmarks, merge_sort_forward_list)
+  ->RangeMultiplier(Multiplier)->Range(MinSize, MaxSize)
+  ->Unit(benchmark::kMicrosecond);
+
+BENCHMARK_REGISTER_F(SortingBenchmarks, bucket_sort_forward_list)
   ->RangeMultiplier(Multiplier)->Range(MinSize, MaxSize)
   ->Unit(benchmark::kMicrosecond);
 
@@ -149,5 +193,9 @@ BENCHMARK_REGISTER_F(SortingBenchmarks, std_sort_forward_list)
   ->Unit(benchmark::kMicrosecond);
 
 BENCHMARK_REGISTER_F(SortingBenchmarks, merge_sort_linked_list)
+  ->RangeMultiplier(Multiplier)->Range(MinSize, MaxSize)
+  ->Unit(benchmark::kMicrosecond);
+
+BENCHMARK_REGISTER_F(SortingBenchmarks, bucket_sort_linked_list)
   ->RangeMultiplier(Multiplier)->Range(MinSize, MaxSize)
   ->Unit(benchmark::kMicrosecond);
