@@ -316,4 +316,76 @@ constexpr std::pair<size_t, ranges::borrowed_iterator_t<R>> bucket_sort_splice
                                  *data_ptr);
 }
 
+/**
+ * @brief  Performs a splice-based version of the bucket sorting
+ *         algorithm on the given range, using a strict weak order and
+ *         an equivalence relation that is weakly consistent with it
+ *         (see above for details). If the relation is (totally)
+ *         consistent with the order, then the sorting is stable
+ * @tparam _max_buckets is the maximum number of equivalence classes
+ *         used for the given range
+ * @tparam EqRel must be an equivalence relation weakly consistent
+ *         with Comp (see above)
+ * @tparam Comp must be a strict weak order (see above)
+ * @return The size of the range and an iterator to its last element
+ *         after sorting (or begin(range) if it is empty)
+ * @note   If the real number of buckets is bigger than _max_buckets,
+ *         the algorithm will still work correctly but a little less
+ *         efficiently, as it will require an additional inplace_merge
+ * @note   The algorithm uses additional (_max_buckets *
+ *         (sizeof(pair<size_t, iterator_t<R>>) + sizeof(T))) bytes of
+ *         memory on the stack, where T is the minimal unsigned type
+ *         capable of holding _max_buckets (e.g., uint8_t if it is <=
+ *         255). If that is too much stack memory, consider using the
+ *         version that takes an allocator
+ **/
+template <size_t _max_buckets = 32,
+          spliceable_range R, typename EqRel, typename Proj1 = std::identity,
+          typename Comp = ranges::less, typename Proj2 = std::identity>
+  requires(_max_buckets > 0 && splice_sortable_range<R, Comp, Proj2>
+           && std::indirect_equivalence_relation
+              <EqRel, std::projected<ranges::iterator_t<R>, Proj1>>)
+constexpr std::pair<size_t, ranges::borrowed_iterator_t<R>> bucket_sort_splice
+  (R&& range, const EqRel rel, const Proj1 proj1 = {},
+   const Comp comp = {}, const Proj2 proj2 = {}) {
+  return
+    bucket_sort_splice<_max_buckets>(std::forward<R>(range),
+                                     before_begin(range), ranges::end(range),
+                                     rel, proj1, comp, proj2);
+}
+
+/**
+ * @brief  Performs a splice-based version of the bucket sorting
+ *         algorithm on the given range, using a strict weak order, an
+ *         equivalence relation that is weakly consistent with it (see
+ *         above for details) and a custom allocator for additional
+ *         memory. If the relation is (totally) consistent with the
+ *         order, then the sorting is stable
+ * @tparam _max_buckets is the maximum number of equivalence classes
+ *         used for the given range
+ * @tparam EqRel must be an equivalence relation weakly consistent
+ *         with Comp (see above)
+ * @tparam Comp must be a strict weak order (see above)
+ * @return The size of the range and an iterator to its last element
+ *         after sorting (or begin(range) if it is empty)
+ * @note   If the real number of buckets is bigger than _max_buckets,
+ *         the algorithm will still work correctly but a little less
+ *         efficiently, as it will require an additional inplace_merge
+ **/
+template <size_t _max_buckets = 32, typename Allocator,
+          spliceable_range R, typename EqRel, typename Proj1 = std::identity,
+          typename Comp = ranges::less, typename Proj2 = std::identity>
+  requires(_max_buckets > 0 && splice_sortable_range<R, Comp, Proj2>
+           && std::indirect_equivalence_relation
+              <EqRel, std::projected<ranges::iterator_t<R>, Proj1>>)
+constexpr std::pair<size_t, ranges::borrowed_iterator_t<R>> bucket_sort_splice
+  (Allocator&& alloc, R&& range, const EqRel rel, const Proj1 proj1 = {},
+   const Comp comp = {}, const Proj2 proj2 = {}) {
+  return
+    bucket_sort_splice<_max_buckets>(std::forward<Allocator>(alloc),
+                                     std::forward<R>(range),
+                                     before_begin(range), ranges::end(range),
+                                     rel, proj1, comp, proj2);
+}
+
 } // namespace enranged
