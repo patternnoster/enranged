@@ -338,23 +338,36 @@ TEST_F(SortingListTests, alt_interfaces) {
 
   this->test_sorted(result, this->test_vec.begin(), this->test_vec.end());
 
-  for (size_t i = 0; i < 2; ++i) {
+  const auto call_sort = [this](const size_t idx) {
+    const auto test_bucket_sort = [this](auto result) {
+      EXPECT_EQ(result.first, ranges::size(this->range));
+      return result.second;
+    };
+
+    switch (idx) {
+    case 0: return insertion_sort_splice(this->range);
+    case 1: return merge_sort_splice(this->range);
+    case 2: return test_bucket_sort(bucket_sort_splice(this->range,
+                                                       equal_shifts<26>));
+    case 3: return test_bucket_sort(bucket_sort_splice(std::allocator<int>{},
+                                                       this->range,
+                                                       equal_shifts<26>));
+    default: return std::list<int>::iterator{};
+    };
+  };
+
+  for (size_t i = 0; i < 4; ++i) {
     this->build_test_vec(100);
     this->build_range();
 
-    const auto result = i == 0 ? insertion_sort_splice(this->range)
-      : merge_sort_splice(this->range);
-
+    auto result = call_sort(i);
     this->test_sorted(result, this->test_vec.begin(), this->test_vec.end());
+
+    // Also test empty
+    this->range.clear();
+    result = call_sort(i);
+    EXPECT_EQ(result, ranges::end(this->range));
   }
-
-  // Also test empty
-  this->range.clear();
-  const auto is_result = insertion_sort_splice(this->range);
-  const auto ms_result = merge_sort_splice(this->range);
-
-  ASSERT_EQ(is_result, ranges::end(this->range));
-  ASSERT_EQ(ms_result, ranges::end(this->range));
 }
 
 TEST_F(SortingListTests, weakly_consistent_bucket_sort) {
