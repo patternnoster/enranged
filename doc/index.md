@@ -13,6 +13,7 @@ The library contains several sorting algorithms that use splicing instead of mov
 
 | Name | Description |
 |---|---|
+| [**bucket_sort_splice**](#bucket_sort_splice) | performs a splice-based version of the bucket sorting algorithm on the open interval (left, right) in the given range, using a strict weak order and an equivalence relation that is weakly consistent with it. If the relation is (totally) consistent with the order, then the sorting is stable |
 | [**coinplace_merge_splice**](#coinplace_merge_splice) | given a subrange (left, right] of a spliceable range and an iterator mid from that subrange, assumes the subranges (left, mid] and (mid, right] are sorted, performs a stable inplace splice-based merge into one sorted subrange (left, result], and returns result |
 | [**insertion_sort_splice**](#insertion_sort_splice) | performs a splice-based version of the stable insertion sorting algorithm on the corange (left, left + count] and returns an iterator to its last element |
 | [**merge_sort_splice**](#merge_sort_splice) | performs a cache-friendly splice-based version of the stable merge sorting algorithm on the corange (left, left + count] and returns an iterator to its last element |
@@ -42,6 +43,55 @@ One can easily prove that both forms are equivalent (but the first one looks sim
 
 > [!NOTE]
 > This concept is different from `std::sortable` as it doesn't require the iterators to be permutable or even indirectly_movable, since there is no moving elements in splicing-based algorithms.
+
+---
+
+### bucket_sort_splice
+<sub>Defined in header [&lt;enranged/sorting.hpp&gt;](/include/enranged/sorting.hpp)</sub>
+```c++
+template <size_t _max_buckets = 32,
+          spliceable_range R, left_limit_of<R> L1, right_limit_of<R> L2,
+          typename EqRel, typename Proj1 = std::identity,
+          typename Comp = std::ranges::less, typename Proj2 = std::identity>
+  requires(_max_buckets > 0 && splice_sortable_range<R, Comp, Proj2>
+           && std::indirect_equivalence_relation
+              <EqRel, std::projected<std::ranges::iterator_t<R>, Proj1>>)
+constexpr std::pair<size_t, std::ranges::borrowed_iterator_t<R>> bucket_sort_splice
+  (R&& range, L1 left, L2 right,
+   EqRel rel, Proj1 proj1 = {}, Comp comp = {}, Proj2 proj2 = {});
+```
+Performs a splice-based version of the bucket sorting algorithm on the open interval (left, right) in the given range, using a strict weak order and an equivalence relation that is weakly consistent with it. If the relation is (totally) consistent with the order, then the sorting is stable.
+
+A predicate (denoted by `x~y`) is an equivalence relation if `x~x`, `x~y` implies `y~x` and `x~y & y~z` implies `x~z` for all x, y and z.
+
+We say that an equivalence relation is weakly consistent with a strict weak order (denoted by `x<y` with its negation `!(x<y)` denoted by `x>=y`) iff `x<y & x~a & y~b` implies `a<b` or `a~b` for all x, y, a, b. Or, equivalently, the relation `x<'y <=> x<y & !(x~y)` is a strict weak order.
+Put simply, weak consistency means that any pair of elements from two different equivalence classes (i.e. buckets) compare the same. An example of such a relation on positive integers, weakly consistent with the natural order (<), is: `x~y <=> (x>>k) == (y>>k)` for some k.
+
+An equivalence relation is (totally) consistent with a strict weak order iff it is weakly consistent with it and additionally `x>=y & y>=x` implies `x~y`. Equivalently, `x<'y` induces a (strict) total order on equivalency classes.
+In the bit shift example above the relation is also (totally) consistent with the natural order.
+
+To get the best performance, one should choose a relation that gives not-too-many buckets rougly equal in size. As corner cases, if none of the elements are equivalent, the algorithm degrades to [insertion sort](#insertion_sort_splice); if all elements are equivalent, it degrades to [merge sort](#merge_sort_splice) with an extra traversal of the entire range.
+
+**Template parameters**
+
+* `_max_buckets` is the maximum number of equivalence classes used for the given interval
+* `EqRel` must be an equivalence relation weakly consistent with Comp (see above)
+* `Comp` must be a strict weak order (see above)
+
+**Parameters**
+
+* `left` must be a valid left limit of the given range (i.e., a front sentinel or a dereferenceable iterator)
+* `right` must be a valid right limit of the given range (i.e., a sentinel equal to **end(range)** or a dereferenceable iterator)
+
+**Return value**
+
+The size of the sorted interval and an iterator to its last element after sorting (or [**after(range, left)**](#after) if the interval is empty).
+
+> [!NOTE]
+> If the real number of buckets is bigger than _max_buckets, the algorithm will still work correctly but a little less efficiently, as it will require an additional [inplace merge](#coinplace_merge_splice).
+
+> [!NOTE]
+> The algorithm uses additional `_max_buckets * (sizeof(pair<size_t, iterator_t<R>>) + sizeof(T))` bytes of memory on the stack, where T is the minimal unsigned type capable of holding _max_buckets (e.g., `uint8_t` if it is <= 255). If that is too much stack memory, consider using the version that takes an allocator.
 
 ---
 
