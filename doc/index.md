@@ -95,6 +95,101 @@ The size of the sorted interval and an iterator to its last element after sortin
 
 ---
 
+<sub>Defined in header [&lt;enranged/sorting.hpp&gt;](/include/enranged/sorting.hpp)</sub>
+```c++
+template <size_t _max_buckets = 32, typename Allocator,
+          spliceable_range R, left_limit_of<R> L1, right_limit_of<R> L2,
+          typename EqRel, typename Proj1 = std::identity,
+          typename Comp = std::ranges::less, typename Proj2 = std::identity>
+  requires(_max_buckets > 0 && splice_sortable_range<R, Comp, Proj2>
+           && std::indirect_equivalence_relation
+              <EqRel, std::projected<std::ranges::iterator_t<R>, Proj1>>)
+constexpr std::pair<size_t, std::ranges::borrowed_iterator_t<R>> bucket_sort_splice
+  (Allocator&& alloc, R&& range, L1 left, L2 right,
+   EqRel rel, Proj1 proj1 = {}, Comp comp = {}, Proj2 proj2 = {});
+```
+Performs a splice-based version of the bucket sorting algorithm on the open interval (left, right) in the given range, using a strict weak order, an equivalence relation that is weakly consistent with it (see above for details) and a custom allocator for additional memory. If the relation is (totally) consistent with the order, then the sorting is stable.
+
+**Template parameters**
+
+* `_max_buckets` is the maximum number of equivalence classes used for the given interval
+* `EqRel` must be an equivalence relation weakly consistent with Comp (see above)
+* `Comp` must be a strict weak order (see above)
+
+**Parameters**
+
+* `left` must be a valid left limit of the given range (i.e., a front sentinel or a dereferenceable iterator)
+* `right` must be a valid right limit of the given range (i.e., a sentinel equal to **end(range)** or a dereferenceable iterator)
+
+**Return value**
+
+The size of the sorted interval and an iterator to its last element after sorting (or [**after(range, left)**](#after) if the interval is empty).
+
+> [!NOTE]
+> If the real number of buckets is bigger than _max_buckets, the algorithm will still work correctly but a little less efficiently, as it will require an additional [inplace merge](#coinplace_merge_splice).
+
+---
+
+<sub>Defined in header [&lt;enranged/sorting.hpp&gt;](/include/enranged/sorting.hpp)</sub>
+```c++
+template <size_t _max_buckets = 32,
+          spliceable_range R, typename EqRel, typename Proj1 = std::identity,
+          typename Comp = std::ranges::less, typename Proj2 = std::identity>
+  requires(_max_buckets > 0 && splice_sortable_range<R, Comp, Proj2>
+           && std::indirect_equivalence_relation
+              <EqRel, std::projected<std::ranges::iterator_t<R>, Proj1>>)
+constexpr std::pair<size_t, std::ranges::borrowed_iterator_t<R>> bucket_sort_splice
+  (R&& range, EqRel rel, Proj1 proj1 = {}, Comp comp = {}, Proj2 proj2 = {});
+```
+Performs a splice-based version of the bucket sorting algorithm on the given range, using a strict weak order and an equivalence relation that is weakly consistent with it (see above for details). If the relation is (totally) consistent with the order, then the sorting is stable.
+
+**Template parameters**
+
+* `_max_buckets` is the maximum number of equivalence classes used for the given range
+* `EqRel` must be an equivalence relation weakly consistent with Comp (see above)
+* `Comp` must be a strict weak order (see above)
+
+**Return value**
+
+The size of the range and an iterator to its last element after sorting (or **begin(range)** if it is empty).
+
+> [!NOTE]
+> If the real number of buckets is bigger than _max_buckets, the algorithm will still work correctly but a little less efficiently, as it will require an additional [inplace merge](#coinplace_merge_splice).
+
+> [!NOTE]
+> The algorithm uses additional `_max_buckets * (sizeof(pair<size_t, iterator_t<R>>) + sizeof(T))` bytes of memory on the stack, where T is the minimal unsigned type capable of holding _max_buckets (e.g., `uint8_t` if it is <= 255). If that is too much stack memory, consider using the version that takes an allocator.
+
+---
+
+<sub>Defined in header [&lt;enranged/sorting.hpp&gt;](/include/enranged/sorting.hpp)</sub>
+```c++
+template <size_t _max_buckets = 32, typename Allocator,
+          spliceable_range R, typename EqRel, typename Proj1 = std::identity,
+          typename Comp = std::ranges::less, typename Proj2 = std::identity>
+  requires(_max_buckets > 0 && splice_sortable_range<R, Comp, Proj2>
+           && std::indirect_equivalence_relation
+              <EqRel, std::projected<std::ranges::iterator_t<R>, Proj1>>)
+constexpr std::pair<size_t, std::ranges::borrowed_iterator_t<R>> bucket_sort_splice
+  (Allocator&& alloc, R&& range,
+   EqRel rel, Proj1 proj1 = {}, Comp comp = {}, Proj2 proj2 = {});
+```
+Performs a splice-based version of the bucket sorting algorithm on the given range, using a strict weak order, an equivalence relation that is weakly consistent with it (see above for details) and a custom allocator for additional memory. If the relation is (totally) consistent with the order, then the sorting is stable.
+
+**Template parameters**
+
+* `_max_buckets` is the maximum number of equivalence classes used for the given range
+* `EqRel` must be an equivalence relation weakly consistent with Comp (see above)
+* `Comp` must be a strict weak order (see above)
+
+**Return value**
+
+The size of the range and an iterator to its last element after sorting (or **begin(range)** if it is empty).
+
+> [!NOTE]
+> If the real number of buckets is bigger than _max_buckets, the algorithm will still work correctly but a little less efficiently, as it will require an additional [inplace merge](#coinplace_merge_splice).
+
+---
+
 ### coinplace_merge_splice
 <sub>Defined in header [&lt;enranged/sorting.hpp&gt;](/include/enranged/sorting.hpp)</sub>
 ```c++
