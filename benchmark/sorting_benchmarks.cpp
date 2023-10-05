@@ -76,6 +76,10 @@ protected:
     return *range_;
   }
 
+  void TearDown(const ::benchmark::State& state) {
+    range_.reset();
+  }
+
 private:
   std::unique_ptr<T> range_;
 };
